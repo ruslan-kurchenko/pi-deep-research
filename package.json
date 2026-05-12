@@ -1,0 +1,30 @@
+{
+  "name": "pi-deep-research",
+  "version": "0.1.0",
+  "description": "Deep-research workflow extension for pi — parallel scouts, synthesis, alternatives matrix, ADR/RFC/Design Doc/PRD with KPI contracts",
+  "license": "MIT",
+  "type": "module",
+  "pi": {
+    "extensions": ["./src/index.ts"]
+  },
+  "scripts": {
+    "test": "./node_modules/.bin/vitest run",
+    "test:watch": "./node_modules/.bin/vitest",
+    "test:coverage": "./node_modules/.bin/vitest run --coverage",
+    "lint": "./node_modules/.bin/biome check src tests",
+    "lint:fix": "./node_modules/.bin/biome check --write src tests",
+    "format": "./node_modules/.bin/biome format --write src tests",
+    "typecheck": "./node_modules/.bin/tsc --noEmit"
+  },
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "^0.74.0",
+    "typebox": "^1.1.24"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^3.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
