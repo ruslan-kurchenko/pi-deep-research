@@ -4,7 +4,6 @@ import { runNew } from "./commands/new.js";
 import { runScout } from "./commands/scout.js";
 import { runStatus, runResume } from "./commands/status.js";
 import { getActiveThread } from "./state/store.js";
-import type { SubagentTool } from "./scouts/base.js";
 
 const GLOBAL_STATE_DIR = join(process.env["HOME"] ?? "~", ".pi", "agent", "state");
 
@@ -33,33 +32,12 @@ export default function piDeepResearch(pi: ExtensionAPI) {
         ctx.ui.notify("No active thread. Run /research:new first.", "error");
         return;
       }
-
-      // Build a subagent tool bridge — delegates to pi-subagents `subagent` tool
-      // via sendUserMessage. The LLM drives the actual subagent invocation.
-      const subagent: SubagentTool = {
-        call: async ({ agent, task }) => {
-          // Inject the subagent invocation as a follow-up steer message.
-          // pi-subagents picks it up via its registered tool.
-          pi.sendMessage(
-            {
-              customType: "pi-deep-research:scout-dispatch",
-              content: `Run subagent: agent="${agent}"\n\nTask:\n${task}`,
-              display: true,
-            },
-            { triggerTurn: true, deliverAs: "followUp" }
-          );
-          // Return a placeholder — the actual result is written by the LLM via
-          // the subagent tool, which writes to the output file directly.
-          return { output: `Scout dispatched: ${agent}` };
-        },
-      };
-
       await runScout(
         args ?? "",
         ctx,
+        pi,
         ctx.cwd,
         activeId,
-        subagent,
         inferProjectWing(ctx.cwd)
       );
     },

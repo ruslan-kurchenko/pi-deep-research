@@ -1,15 +1,15 @@
 import { loadPrompt } from "../lib/grill.js";
 import { scoutOutputPath } from "./base.js";
-import type { ScoutTask } from "./base.js";
+import type { ScoutTaskSpec } from "./base.js";
 
-export async function buildRepoScoutTask(
+export async function buildRepoScoutSpec(
   threadDir: string,
   brief: string,
   projectRoot: string,
   relevantPaths: string[],
   index: number
-): Promise<ScoutTask> {
-  const task = await loadPrompt("scout-repo", {
+): Promise<ScoutTaskSpec> {
+  const prompt = await loadPrompt("scout-repo", {
     brief,
     project_root: projectRoot,
     relevant_paths:
@@ -19,7 +19,8 @@ export async function buildRepoScoutTask(
   });
   return {
     agentName: "research-repo-scout",
-    task,
+    prompt,
+    label: "repo",
     outputFile: scoutOutputPath(threadDir, `repo-${String(index).padStart(3, "0")}`, "repo"),
   };
 }

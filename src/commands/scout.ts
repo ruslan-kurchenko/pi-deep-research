@@ -1,21 +1,21 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { threadDir } from "../lib/paths.js";
-import { runScoutsParallel, formatScoutSummary } from "../scouts/base.js";
-import { buildWebScoutTask } from "../scouts/web.js";
-import { buildOssScoutTask } from "../scouts/oss.js";
-import { buildRepoScoutTask } from "../scouts/repo.js";
-import { buildMemoryScoutTask } from "../scouts/memory.js";
+import { buildScoutInstruction } from "../scouts/base.js";
+import { buildWebScoutSpec } from "../scouts/web.js";
+import { buildOssScoutSpec } from "../scouts/oss.js";
+import { buildRepoScoutSpec } from "../scouts/repo.js";
+import { buildMemoryScoutSpec } from "../scouts/memory.js";
 import { getThread, updateThreadPhase } from "../state/store.js";
-import type { SubagentTool } from "../scouts/base.js";
 
 export async function runScout(
   _args: string,
   ctx: ExtensionCommandContext,
+  pi: ExtensionAPI,
   projectRoot: string,
   activeThreadId: string,
-  subagent: SubagentTool,
   projectWing: string
 ): Promise<void> {
   const thread = await getThread(projectRoot, activeThreadId);
@@ -23,6 +23,7 @@ export async function runScout(
     ctx.ui.notify(`No active thread found: ${activeThreadId}`, "error");
     return;
   }
+
   if (thread.phase !== "brief") {
     const ok = await ctx.ui.confirm(
       "Scout already ran",
@@ -41,33 +42,25 @@ export async function runScout(
     return;
   }
 
-  ctx.ui.setStatus("research", "🔬 scouts dispatching...");
-
-  const tasks = await Promise.all([
-    buildWebScoutTask(dir, brief, 1),
-    buildOssScoutTask(dir, brief, 1),
-    buildRepoScoutTask(dir, brief, projectRoot, [], 1),
-    buildMemoryScoutTask(dir, brief, projectWing, 1),
+  // Build all 4 scout task specs (prompt content + output paths)
+  const specs = await Promise.all([
+    buildWebScoutSpec(dir, brief, 1),
+    buildOssScoutSpec(dir, brief, 1),
+    buildRepoScoutSpec(dir, brief, projectRoot, [], 1),
+    buildMemoryScoutSpec(dir, brief, projectWing, 1),
   ]);
 
-  const results = await runScoutsParallel(subagent, tasks);
-  const summary = formatScoutSummary(results);
+  // Advance phase now — scouts are in flight
+  await updateThreadPhase(projectRoot, activeThreadId, "scout");
 
-  const succeeded = results.filter((r) => r.success).length;
-  const failed = results.filter((r) => !r.success).length;
-
-  if (succeeded > 0) {
-    await updateThreadPhase(projectRoot, activeThreadId, "scout");
-  }
-
-  ctx.ui.setStatus("research", "");
   ctx.ui.notify(
-    [
-      `Scouts complete: ${succeeded} succeeded, ${failed} failed`,
-      summary,
-      "",
-      succeeded > 0 ? "Run /research:groom to synthesize findings." : "Fix scout errors and retry.",
-    ].join("\n"),
-    succeeded > 0 ? "info" : "error"
+    `4 scouts dispatched in parallel. Watch for subagent activity above.\nWhen all done, run /research:groom`,
+    "info"
+  );
+
+  // Hand off to the LLM — it drives pi-subagents + writes files
+  pi.sendUserMessage(
+    buildScoutInstruction(activeThreadId, dir, specs),
+    { deliverAs: "followUp" }
   );
 }
