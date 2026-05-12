@@ -2,204 +2,149 @@ import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { runNew } from "./commands/new.js";
 import { runScout } from "./commands/scout.js";
+import { runGroom } from "./commands/groom.js";
+import { runAlternatives } from "./commands/alternatives.js";
+import { runDocument } from "./commands/document.js";
+import { runAdr } from "./commands/adr.js";
+import { runRfc } from "./commands/rfc.js";
+import { runDesignDoc } from "./commands/design-doc.js";
+import { runPrd } from "./commands/prd.js";
+import { runContract } from "./commands/contract.js";
+import { runEvaluate } from "./commands/evaluate.js";
 import { runStatus, runResume } from "./commands/status.js";
 import { getActiveThread } from "./state/store.js";
 
 const GLOBAL_STATE_DIR = join(process.env["HOME"] ?? "~", ".pi", "agent", "state");
 
-/** Derive the project-specific MemPalace wing name from the project directory. */
 function inferProjectWing(cwd: string): string {
   const parts = cwd.replace(/\/$/, "").split("/");
   const name = parts[parts.length - 1] ?? "project";
   return `project-${name}`;
 }
 
+/** Resolve active thread or notify and bail. */
+async function requireActive(
+  ctx: Parameters<Parameters<ExtensionAPI["registerCommand"]>[1]["handler"]>[1],
+  label: string
+): Promise<string | null> {
+  const id = await getActiveThread(GLOBAL_STATE_DIR);
+  if (!id) {
+    ctx.ui.notify(`No active thread. Run /research:new first.`, "error");
+    return null;
+  }
+  return id;
+}
+
 export default function piDeepResearch(pi: ExtensionAPI) {
-  // ── /research:new ─────────────────────────────────────────────────────────
+  // ── /research:new ──────────────────────────────────────────────────────────
   pi.registerCommand("research:new", {
-    description: "Start a new research thread (grill-me brief + scope)",
+    description: "Start a new research thread — grill-me brief + scope selection",
     handler: async (args, ctx) => {
       await runNew(args ?? "", ctx, ctx.cwd);
     },
   });
 
-  // ── /research:scout ───────────────────────────────────────────────────────
+  // ── /research:scout ────────────────────────────────────────────────────────
   pi.registerCommand("research:scout", {
-    description: "Dispatch parallel scouts (web, OSS, repo, memory)",
+    description: "Dispatch 4 parallel scouts (web, OSS, repo, memory)",
     handler: async (args, ctx) => {
-      const activeId = await getActiveThread(GLOBAL_STATE_DIR);
-      if (!activeId) {
-        ctx.ui.notify("No active thread. Run /research:new first.", "error");
-        return;
-      }
-      await runScout(
-        args ?? "",
-        ctx,
-        pi,
-        ctx.cwd,
-        activeId,
-        inferProjectWing(ctx.cwd)
-      );
+      const id = await requireActive(ctx, "scout");
+      if (!id) return;
+      await runScout(args ?? "", ctx, pi, ctx.cwd, id, inferProjectWing(ctx.cwd));
     },
   });
 
-  // ── /research:groom ───────────────────────────────────────────────────────
+  // ── /research:groom ────────────────────────────────────────────────────────
   pi.registerCommand("research:groom", {
-    description: "Interactive synthesis + grooming session on raw findings",
-    handler: async (_args, ctx) => {
-      const activeId = await getActiveThread(GLOBAL_STATE_DIR);
-      if (!activeId) { ctx.ui.notify("No active thread.", "error"); return; }
-      // Phase 2 — stub for now, signals to LLM what to do
-      pi.sendUserMessage(
-        `Run /research:groom on thread ${activeId}.\n` +
-        `Read all files in research/${activeId}/raw/ then:\n` +
-        `1. Conduct a meta-cognitive synthesis (5-step: decompose/solve/verify/synthesize/reflect)\n` +
-        `2. Ask me targeted clarifying questions based on gaps in the findings\n` +
-        `3. Write the result to research/${activeId}/synthesis.md\n` +
-        `Include confidence scores (0.0-1.0) per claim.`,
-        { deliverAs: "followUp" }
-      );
-    },
-  });
-
-  // ── /research:alternatives ────────────────────────────────────────────────
-  pi.registerCommand("research:alternatives", {
-    description: "Produce ranked alternatives matrix (1-5 options + do-nothing)",
-    handler: async (_args, ctx) => {
-      const activeId = await getActiveThread(GLOBAL_STATE_DIR);
-      if (!activeId) { ctx.ui.notify("No active thread.", "error"); return; }
-      pi.sendUserMessage(
-        `Run /research:alternatives on thread ${activeId}.\n` +
-        `Read research/${activeId}/synthesis.md and research/${activeId}/brief.md then:\n` +
-        `1. Identify the rubric dimensions (or ask me to define them)\n` +
-        `2. Generate 1-5 alternatives PLUS "do nothing" as the baseline\n` +
-        `3. Score each alternative on each dimension\n` +
-        `4. Write the matrix to research/${activeId}/alternatives.md\n` +
-        `5. Run research-challenger and research-devils-advocate in parallel against the matrix\n` +
-        `6. Write their outputs to research/${activeId}/cross-checks/\n` +
-        `7. Present the final ranked recommendation to me and ask for confirmation.`,
-        { deliverAs: "followUp" }
-      );
-    },
-  });
-
-  // ── /research:document (smart router) ────────────────────────────────────
-  pi.registerCommand("research:document", {
-    description: "Recommend and route to the right doc format (ADR/RFC/Design Doc/PRD)",
-    handler: async (_args, ctx) => {
-      const activeId = await getActiveThread(GLOBAL_STATE_DIR);
-      if (!activeId) { ctx.ui.notify("No active thread.", "error"); return; }
-      pi.sendUserMessage(
-        `Run /research:document on thread ${activeId}.\n` +
-        `Read research/${activeId}/brief.md and research/${activeId}/alternatives.md then:\n` +
-        `1. Use the research-doc-advisor agent to recommend the right document format\n` +
-        `2. Present the recommendation + rationale to me\n` +
-        `3. Ask me to confirm or choose a different format\n` +
-        `4. Then run the appropriate /research:adr, /research:rfc, /research:design-doc, or /research:prd command`,
-        { deliverAs: "followUp" }
-      );
-    },
-  });
-
-  // ── /research:adr ─────────────────────────────────────────────────────────
-  pi.registerCommand("research:adr", {
-    description: "Produce an Architecture Decision Record from the alternatives",
+    description: "Synthesize scout findings + interactive grooming with operator",
     handler: async (args, ctx) => {
-      const activeId = await getActiveThread(GLOBAL_STATE_DIR);
-      if (!activeId) { ctx.ui.notify("No active thread.", "error"); return; }
-      const title = (args ?? "").trim() || "untitled";
-      pi.sendUserMessage(
-        `Run /research:adr "${title}" on thread ${activeId}.\n` +
-        `Read research/${activeId}/alternatives.md and research/${activeId}/synthesis.md then:\n` +
-        `1. Use the ADR template at templates/adr.md\n` +
-        `2. Fill in all {{placeholders}}\n` +
-        `3. Write to docs/decisions/adrs/ with the next available NNN prefix\n` +
-        `4. Update research/${activeId}/.state.json linkedDocs.adr`,
-        { deliverAs: "followUp" }
-      );
+      const id = await requireActive(ctx, "groom");
+      if (!id) return;
+      await runGroom(args ?? "", ctx, pi, ctx.cwd, id);
     },
   });
 
-  // ── /research:rfc ─────────────────────────────────────────────────────────
+  // ── /research:alternatives ─────────────────────────────────────────────────
+  pi.registerCommand("research:alternatives", {
+    description: "Generate ranked alternatives matrix + challenger + devil's advocate",
+    handler: async (args, ctx) => {
+      const id = await requireActive(ctx, "alternatives");
+      if (!id) return;
+      await runAlternatives(args ?? "", ctx, pi, ctx.cwd, id);
+    },
+  });
+
+  // ── /research:document (smart router) ─────────────────────────────────────
+  pi.registerCommand("research:document", {
+    description: "Recommend the right doc format (ADR/RFC/Design Doc/PRD) then route",
+    handler: async (args, ctx) => {
+      const id = await requireActive(ctx, "document");
+      if (!id) return;
+      await runDocument(args ?? "", ctx, pi, ctx.cwd, id);
+    },
+  });
+
+  // ── /research:adr ──────────────────────────────────────────────────────────
+  pi.registerCommand("research:adr", {
+    description: "Generate an Architecture Decision Record",
+    handler: async (args, ctx) => {
+      const id = await requireActive(ctx, "adr");
+      if (!id) return;
+      await runAdr(args ?? "", ctx, pi, ctx.cwd, id);
+    },
+  });
+
+  // ── /research:rfc ──────────────────────────────────────────────────────────
   pi.registerCommand("research:rfc", {
-    description: "Produce an RFC from the alternatives",
-    handler: async (_args, ctx) => {
-      const activeId = await getActiveThread(GLOBAL_STATE_DIR);
-      if (!activeId) { ctx.ui.notify("No active thread.", "error"); return; }
-      pi.sendUserMessage(
-        `Run /research:rfc on thread ${activeId}.\n` +
-        `Use the RFC template at templates/rfc.md. Write to docs/rfcs/.`,
-        { deliverAs: "followUp" }
-      );
+    description: "Generate a multi-decision RFC",
+    handler: async (args, ctx) => {
+      const id = await requireActive(ctx, "rfc");
+      if (!id) return;
+      await runRfc(args ?? "", ctx, pi, ctx.cwd, id);
     },
   });
 
-  // ── /research:design-doc ──────────────────────────────────────────────────
+  // ── /research:design-doc ───────────────────────────────────────────────────
   pi.registerCommand("research:design-doc", {
-    description: "Produce a Design Doc with C4 diagrams from the alternatives",
-    handler: async (_args, ctx) => {
-      const activeId = await getActiveThread(GLOBAL_STATE_DIR);
-      if (!activeId) { ctx.ui.notify("No active thread.", "error"); return; }
-      pi.sendUserMessage(
-        `Run /research:design-doc on thread ${activeId}.\n` +
-        `Use the Design Doc template at templates/design-doc.md.\n` +
-        `Use the research-architect agent to generate C4 context + container diagrams in Mermaid.\n` +
-        `Write to docs/design-docs/.`,
-        { deliverAs: "followUp" }
-      );
+    description: "Generate a Design Doc with C4 diagrams",
+    handler: async (args, ctx) => {
+      const id = await requireActive(ctx, "design-doc");
+      if (!id) return;
+      await runDesignDoc(args ?? "", ctx, pi, ctx.cwd, id);
     },
   });
 
-  // ── /research:prd ─────────────────────────────────────────────────────────
+  // ── /research:prd ──────────────────────────────────────────────────────────
   pi.registerCommand("research:prd", {
-    description: "Produce a PRD citing linked ADRs/RFC/Design Doc",
-    handler: async (_args, ctx) => {
-      const activeId = await getActiveThread(GLOBAL_STATE_DIR);
-      if (!activeId) { ctx.ui.notify("No active thread.", "error"); return; }
-      pi.sendUserMessage(
-        `Run /research:prd on thread ${activeId}.\n` +
-        `Use the PRD template at templates/prd.md.\n` +
-        `Reference all linked docs from research/${activeId}/.state.json.\n` +
-        `Write to docs/prds/.`,
-        { deliverAs: "followUp" }
-      );
+    description: "Generate a PRD citing linked ADRs/RFC/Design Doc",
+    handler: async (args, ctx) => {
+      const id = await requireActive(ctx, "prd");
+      if (!id) return;
+      await runPrd(args ?? "", ctx, pi, ctx.cwd, id);
     },
   });
 
-  // ── /research:contract ────────────────────────────────────────────────────
+  // ── /research:contract ─────────────────────────────────────────────────────
   pi.registerCommand("research:contract", {
-    description: "Write a measurement contract with predicted KPIs",
-    handler: async (_args, ctx) => {
-      const activeId = await getActiveThread(GLOBAL_STATE_DIR);
-      if (!activeId) { ctx.ui.notify("No active thread.", "error"); return; }
-      pi.sendUserMessage(
-        `Run /research:contract on thread ${activeId}.\n` +
-        `Use the research-kpi-architect agent and the measurement template at templates/measurement.md.\n` +
-        `Write to docs/measurement/.`,
-        { deliverAs: "followUp" }
-      );
+    description: "Write measurement contract with predicted KPIs + rollback criteria",
+    handler: async (args, ctx) => {
+      const id = await requireActive(ctx, "contract");
+      if (!id) return;
+      await runContract(args ?? "", ctx, pi, ctx.cwd, id);
     },
   });
 
-  // ── /research:evaluate ────────────────────────────────────────────────────
+  // ── /research:evaluate ─────────────────────────────────────────────────────
   pi.registerCommand("research:evaluate", {
-    description: "Post-implementation: compare predicted vs actual KPIs",
-    handler: async (_args, ctx) => {
-      const activeId = await getActiveThread(GLOBAL_STATE_DIR);
-      if (!activeId) { ctx.ui.notify("No active thread.", "error"); return; }
-      pi.sendUserMessage(
-        `Run /research:evaluate on thread ${activeId}.\n` +
-        `Read the measurement contract from docs/measurement/.\n` +
-        `Use the configured adapter (Langfuse or manual) to collect actuals.\n` +
-        `Use the evaluation template at templates/evaluation.md.\n` +
-        `Write the report to docs/evaluation/.\n` +
-        `Then save the results to MemPalace via the mempalace_add_drawer MCP tool.`,
-        { deliverAs: "followUp" }
-      );
+    description: "Post-implementation: predicted vs actual KPIs → evaluation report",
+    handler: async (args, ctx) => {
+      const id = await requireActive(ctx, "evaluate");
+      if (!id) return;
+      await runEvaluate(args ?? "", ctx, pi, ctx.cwd, id);
     },
   });
 
-  // ── /research:status ──────────────────────────────────────────────────────
+  // ── /research:status ───────────────────────────────────────────────────────
   pi.registerCommand("research:status", {
     description: "Show all research threads and their current phase",
     handler: async (args, ctx) => {
@@ -208,9 +153,9 @@ export default function piDeepResearch(pi: ExtensionAPI) {
     },
   });
 
-  // ── /research:resume ──────────────────────────────────────────────────────
+  // ── /research:resume ───────────────────────────────────────────────────────
   pi.registerCommand("research:resume", {
-    description: "Switch the active research thread",
+    description: "Switch active research thread",
     handler: async (args, ctx) => {
       await runResume(args ?? "", ctx, ctx.cwd, GLOBAL_STATE_DIR);
     },
