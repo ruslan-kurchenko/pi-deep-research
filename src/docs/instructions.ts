@@ -340,8 +340,25 @@ export function buildEvaluateInstruction(
   contractContent: string,
   outputPath: string,
   today: string,
-  adapterName: string
+  adapterName: string,
+  projectRoot: string
 ): string {
+  const projectName = projectRoot.replace(/\/$/, "").split("/").pop() ?? "project";
+  const projectWing = `project-${projectName}`;
+
+  const adapterInstructions =
+    adapterName === "langfuse"
+      ? `Query the Langfuse scores API for each metric name in the contract:
+   - Base URL: \$LANGFUSE_BASE_URL (env)
+   - Auth: Basic \$LANGFUSE_PUBLIC_KEY:\$LANGFUSE_SECRET_KEY (env)
+   - Endpoint: GET /api/public/scores?name=<metric_name>&limit=1000
+   - Compute p50 and p95 from the returned values.
+   - Use bash to make the request if no dedicated tool is available.`
+      : `The actual values must be filled in manually by the operator.
+   For each metric in the contract, insert a TODO marker:
+   \`actual: TODO — measure via: <measurementMethod from contract>\`
+   The operator fills these in after running the measurement method described in the contract.`;
+
   return `Run /research:evaluate on thread \`${threadId}\`.
 
 ## Measurement contract
@@ -350,16 +367,16 @@ ${contractContent}
 ## Instructions
 
 1. Read the measurement contract above.
-2. For each metric, retrieve the actual value using the adapter: **${adapterName}**
-   - If adapter is "manual": the actual values are filled in by the operator — check if they're present in the contract file, otherwise insert TODO markers.
-   - If adapter is "langfuse": query the Langfuse scores API for each metric name listed in the contract (use the LANGFUSE_BASE_URL, LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY env vars via bash).
+2. For each metric, retrieve the actual value using the **${adapterName}** adapter:
+   ${adapterInstructions}
 3. Write the evaluation report to: \`${outputPath}\`
+   Create parent directories if needed.
 4. After writing, use the \`mcp\` tool to call \`mempalace_add_drawer\` with:
-   - wing: infer from project directory name (e.g. "project-kai")
+   - wing: "${projectWing}"
    - room: "Research"
    - title: "Evaluation: ${threadId}"
-   - content: summary of predicted vs actual (3–5 sentences)
+   - content: 3–5 sentence summary of predicted vs actual results
    - tags: ["evaluation", "measurement", "${threadId}"]
 
-The evaluation report should be honest about where predictions were wrong and why.`.trim();
+Be honest where predictions were wrong and note why in the analysis section.`.trim();
 }

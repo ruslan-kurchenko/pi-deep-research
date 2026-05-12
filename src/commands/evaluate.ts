@@ -59,7 +59,7 @@ export async function runEvaluate(
   pi.sendUserMessage(
     buildEvaluateInstruction(
       activeThreadId, contractPath, contractContent,
-      outputPath, today, adapterName
+      outputPath, today, adapterName, projectRoot
     ),
     { deliverAs: "followUp" }
   );
