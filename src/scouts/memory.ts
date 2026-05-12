@@ -6,7 +6,8 @@ export async function buildMemoryScoutSpec(
   threadDir: string,
   brief: string,
   projectWing: string,
-  index: number
+  index: number,
+  model: string
 ): Promise<ScoutTaskSpec> {
   const prompt = await loadPrompt("scout-memory", {
     brief,
@@ -14,6 +15,7 @@ export async function buildMemoryScoutSpec(
   });
   return {
     agentName: "research-memory-scout",
+    model,
     prompt,
     label: "memory",
     outputFile: scoutOutputPath(threadDir, `memory-${String(index).padStart(3, "0")}`, "memory"),

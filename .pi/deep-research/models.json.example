@@ -1,0 +1,16 @@
+{
+  "_comment": "Per-agent model overrides. Keys are agent names; values are provider/model-id strings. Committed to source control — represents team consensus on model choices. Only listed agents are overridden; others fall back to agent profile defaults.",
+  "agents": {
+    "research-web-scout":       "anthropic/claude-haiku-4.5",
+    "research-memory-scout":    "anthropic/claude-haiku-4.5",
+    "research-doc-advisor":     "anthropic/claude-haiku-4.5",
+    "research-oss-scout":       "anthropic/claude-sonnet-4.6",
+    "research-repo-scout":      "anthropic/claude-sonnet-4.6",
+    "research-synthesizer":     "anthropic/claude-sonnet-4.6",
+    "research-kpi-architect":   "anthropic/claude-sonnet-4.6",
+    "research-architect":       "anthropic/claude-sonnet-4.6",
+    "research-challenger":      "google/gemini-3.1-pro-preview",
+    "research-devils-advocate": "google/gemini-3.1-pro-preview",
+    "research-oracle":          "openai/gpt-5.5"
+  }
+}

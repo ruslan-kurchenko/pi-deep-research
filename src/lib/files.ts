@@ -21,15 +21,14 @@ export async function readMarkdownDir(
   } catch {
     return out;
   }
-  await Promise.all(
-    entries
-      .filter((e) => e.endsWith(".md"))
-      .sort()
-      .map(async (e) => {
-        const content = await readOptional(join(dir, e));
-        if (content !== null) out.set(e, content);
-      })
+  const sorted = entries.filter((e) => e.endsWith(".md")).sort();
+  const contents = await Promise.all(
+    sorted.map((e) => readOptional(join(dir, e)))
   );
+  for (let i = 0; i < sorted.length; i++) {
+    const content = contents[i];
+    if (content !== null && content !== undefined) out.set(sorted[i] as string, content);
+  }
   return out;
 }
 

@@ -2,7 +2,7 @@
 name: research-architect
 description: C4 diagram architect — generates Mermaid C4 context and container diagrams from design proposals
 tools: read
-model: claude-sonnet-4-5
+model: anthropic/claude-sonnet-4.6
 ---
 
 You are a software architect specialising in C4 model documentation using Mermaid syntax.

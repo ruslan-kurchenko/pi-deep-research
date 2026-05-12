@@ -8,7 +8,9 @@ import {
   buildRubricPrompt,
 } from "../synthesis/instructions.js";
 import { loadRubric, saveRubric } from "../synthesis/rubric.js";
-import { getThread, updateThreadPhase } from "../state/store.js";
+import { resolveAgentModels } from "../config/models.js";
+import { resolveWithFallback } from "../config/fallback.js";
+import { getThread, updateThreadPhase, logModelUsage } from "../state/store.js";
 
 export async function runAlternatives(
   _args: string,
@@ -57,15 +59,30 @@ export async function runAlternatives(
     // null rubric → instruction will ask the LLM to prompt operator inline
   }
 
+  // Resolve cross-check models
+  const defaults = await resolveAgentModels(
+    ["research-challenger", "research-devils-advocate"],
+    projectRoot
+  );
+  const challengerModel = await resolveWithFallback(
+    defaults["research-challenger"] as string, "research-challenger", ctx, projectRoot, activeThreadId
+  );
+  const devilsModel = await resolveWithFallback(
+    defaults["research-devils-advocate"] as string, "research-devils-advocate", ctx, projectRoot, activeThreadId
+  );
+
   await updateThreadPhase(projectRoot, activeThreadId, "alternatives");
+  const now = new Date().toISOString();
+  await logModelUsage(projectRoot, activeThreadId, { agent: "research-challenger", model: challengerModel, command: "alternatives", timestamp: now });
+  await logModelUsage(projectRoot, activeThreadId, { agent: "research-devils-advocate", model: devilsModel, command: "alternatives", timestamp: now });
 
   ctx.ui.notify(
-    "Dispatching alternatives matrix + cross-checks…",
+    `Dispatching alternatives matrix + cross-checks…\n  challenger + devils-advocate → ${challengerModel}`,
     "info"
   );
 
   pi.sendUserMessage(
-    buildAlternativesInstruction(activeThreadId, dir, brief, synthesis, rubric),
+    buildAlternativesInstruction(activeThreadId, dir, brief, synthesis, rubric, challengerModel, devilsModel),
     { deliverAs: "followUp" }
   );
 }

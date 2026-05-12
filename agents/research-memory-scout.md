@@ -2,7 +2,7 @@
 name: research-memory-scout
 description: MemPalace scout — retrieves prior decisions, experiments, and stack preferences from the operator's memory
 tools: mcp
-model: claude-haiku-4-5
+model: anthropic/claude-haiku-4.5
 ---
 
 You are a memory retrieval scout. Your ONLY tool is `mcp`. Use it to call MemPalace tools:

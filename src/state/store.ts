@@ -12,6 +12,13 @@ export type ResearchPhase =
   | "evaluate"
   | "closed";
 
+export interface ModelUsageEntry {
+  agent: string;
+  model: string;
+  command: string;
+  timestamp: string;
+}
+
 export interface ResearchThread {
   id: string;
   topic: string;
@@ -26,6 +33,10 @@ export interface ResearchThread {
     measurement: string;
     evaluation: string;
   }>;
+  /** Audit log of every subagent dispatch (agent, model, command, timestamp). */
+  modelUsage: ModelUsageEntry[];
+  /** Operator-confirmed fallback per provider (cached to avoid re-prompting). */
+  modelFallbacks: Record<string, string>;
 }
 
 const STATE_FILE = ".state.json";
@@ -51,6 +62,8 @@ export async function createThread(
     phase: "brief",
     createdAt: new Date().toISOString(),
     linkedDocs: {},
+    modelUsage: [],
+    modelFallbacks: {},
   };
 
   await writeFile(join(dir, STATE_FILE), JSON.stringify(thread, null, 2));
@@ -78,6 +91,30 @@ export async function updateThreadPhase(
   const thread = await getThread(projectRoot, id);
   if (!thread) throw new Error(`Thread not found: ${id}`);
   thread.phase = phase;
+  const file = join(threadDir(projectRoot, id), STATE_FILE);
+  await writeFile(file, JSON.stringify(thread, null, 2));
+}
+
+export async function logModelUsage(
+  projectRoot: string,
+  id: string,
+  entry: ModelUsageEntry
+): Promise<void> {
+  const thread = await getThread(projectRoot, id);
+  if (!thread) throw new Error(`Thread not found: ${id}`);
+  thread.modelUsage = [...(thread.modelUsage ?? []), entry];
+  const file = join(threadDir(projectRoot, id), STATE_FILE);
+  await writeFile(file, JSON.stringify(thread, null, 2));
+}
+
+export async function updateThreadFallbacks(
+  projectRoot: string,
+  id: string,
+  fallbacks: Record<string, string>
+): Promise<void> {
+  const thread = await getThread(projectRoot, id);
+  if (!thread) throw new Error(`Thread not found: ${id}`);
+  thread.modelFallbacks = { ...(thread.modelFallbacks ?? {}), ...fallbacks };
   const file = join(threadDir(projectRoot, id), STATE_FILE);
   await writeFile(file, JSON.stringify(thread, null, 2));
 }

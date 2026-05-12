@@ -8,7 +8,16 @@ import { buildWebScoutSpec } from "../scouts/web.js";
 import { buildOssScoutSpec } from "../scouts/oss.js";
 import { buildRepoScoutSpec } from "../scouts/repo.js";
 import { buildMemoryScoutSpec } from "../scouts/memory.js";
-import { getThread, updateThreadPhase } from "../state/store.js";
+import { resolveAgentModels } from "../config/models.js";
+import { resolveWithFallback } from "../config/fallback.js";
+import { getThread, updateThreadPhase, logModelUsage } from "../state/store.js";
+
+const SCOUT_AGENTS = [
+  "research-web-scout",
+  "research-oss-scout",
+  "research-repo-scout",
+  "research-memory-scout",
+] as const;
 
 export async function runScout(
   _args: string,
@@ -42,23 +51,47 @@ export async function runScout(
     return;
   }
 
-  // Build all 4 scout task specs (prompt content + output paths)
+  // Resolve models (defaults + project override + fallback prompt)
+  const defaults = await resolveAgentModels([...SCOUT_AGENTS], projectRoot);
+  const models: Record<string, string> = {};
+  for (const agent of SCOUT_AGENTS) {
+    models[agent] = await resolveWithFallback(
+      defaults[agent] as string,
+      agent,
+      ctx,
+      projectRoot,
+      activeThreadId
+    );
+  }
+
+  // Build scout task specs with resolved models
   const specs = await Promise.all([
-    buildWebScoutSpec(dir, brief, 1),
-    buildOssScoutSpec(dir, brief, 1),
-    buildRepoScoutSpec(dir, brief, projectRoot, [], 1),
-    buildMemoryScoutSpec(dir, brief, projectWing, 1),
+    buildWebScoutSpec(dir, brief, 1, models["research-web-scout"] as string),
+    buildOssScoutSpec(dir, brief, 1, models["research-oss-scout"] as string),
+    buildRepoScoutSpec(dir, brief, projectRoot, [], 1, models["research-repo-scout"] as string),
+    buildMemoryScoutSpec(dir, brief, projectWing, 1, models["research-memory-scout"] as string),
   ]);
 
-  // Advance phase now — scouts are in flight
+  // Advance phase and log model usage
   await updateThreadPhase(projectRoot, activeThreadId, "scout");
+  const now = new Date().toISOString();
+  for (const spec of specs) {
+    await logModelUsage(projectRoot, activeThreadId, {
+      agent: spec.agentName,
+      model: spec.model,
+      command: "scout",
+      timestamp: now,
+    });
+  }
 
   ctx.ui.notify(
-    `4 scouts dispatched in parallel. Watch for subagent activity above.\nWhen all done, run /research:groom`,
+    `4 scouts dispatched in parallel.\n` +
+    `  web + memory → ${models["research-web-scout"]}\n` +
+    `  oss + repo → ${models["research-oss-scout"]}\n` +
+    `When all done, run /research:groom`,
     "info"
   );
 
-  // Hand off to the LLM — it drives pi-subagents + writes files
   pi.sendUserMessage(
     buildScoutInstruction(activeThreadId, dir, specs),
     { deliverAs: "followUp" }

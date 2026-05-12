@@ -2,6 +2,8 @@ import { join } from "node:path";
 
 export interface ScoutTaskSpec {
   agentName: string;
+  /** Resolved model string, e.g. "anthropic/claude-haiku-4.5" */
+  model: string;
   /** Full rendered prompt content for the subagent. */
   prompt: string;
   /** Absolute path where the subagent should write its markdown output. */
@@ -30,8 +32,10 @@ export function buildScoutInstruction(
   const taskBlocks = tasks
     .map(
       (t, i) => `
-### Scout ${i + 1}: ${t.label} (agent: \`${t.agentName}\`)
-Output file: \`${t.outputFile}\`
+### Scout ${i + 1}: ${t.label}
+- agent: \`${t.agentName}\`
+- model: \`${t.model}\`
+- output: \`${t.outputFile}\`
 
 <task>
 ${t.prompt}
@@ -44,9 +48,19 @@ ${t.prompt}
 ## Instructions
 
 1. Use the \`subagent\` tool in **parallel mode** — dispatch all ${tasks.length} scouts at the same time.
-2. Each scout's task content is provided below.
-3. After each scout completes, write its full markdown output to the specified output file using the \`write\` tool. Do NOT summarise or truncate — write the complete scout output.
-4. Once all ${tasks.length} scouts are done and their outputs are written, confirm with a brief summary:
+2. Pass the specified \`model\` for each scout in the subagent call's \`model\` field.
+3. Each scout's task content is provided below.
+4. After each scout completes, prepend YAML frontmatter to the output before writing:
+   \`\`\`yaml
+   ---
+   agent: <agentName>
+   model: <resolvedModel>
+   generated_at: <ISO timestamp>
+   thread_id: ${threadId}
+   ---
+   \`\`\`
+   Then write to the specified output file using the \`write\` tool. Do NOT summarise or truncate.
+5. Once all ${tasks.length} scouts are done and their outputs are written, confirm with a brief summary:
    - Which scouts succeeded / failed
    - File paths written
    - Any open questions flagged by scouts

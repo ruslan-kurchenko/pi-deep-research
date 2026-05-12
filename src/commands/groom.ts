@@ -4,7 +4,9 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { readOptional, readRawScouts } from "../lib/files.js";
 import { threadDir } from "../lib/paths.js";
 import { buildGroomInstruction } from "../synthesis/instructions.js";
-import { getThread, updateThreadPhase } from "../state/store.js";
+import { resolveAgentModel } from "../config/models.js";
+import { resolveWithFallback } from "../config/fallback.js";
+import { getThread, updateThreadPhase, logModelUsage } from "../state/store.js";
 
 export async function runGroom(
   _args: string,
@@ -42,12 +44,23 @@ export async function runGroom(
 
   const brief = (await readOptional(join(dir, "brief.md"))) ?? thread.topic;
 
-  await updateThreadPhase(projectRoot, activeThreadId, "groom");
+  const defaultModel = await resolveAgentModel("research-synthesizer", projectRoot);
+  const synthModel = await resolveWithFallback(
+    defaultModel, "research-synthesizer", ctx, projectRoot, activeThreadId
+  );
 
-  ctx.ui.notify("Dispatching synthesizer…", "info");
+  await updateThreadPhase(projectRoot, activeThreadId, "groom");
+  await logModelUsage(projectRoot, activeThreadId, {
+    agent: "research-synthesizer",
+    model: synthModel,
+    command: "groom",
+    timestamp: new Date().toISOString(),
+  });
+
+  ctx.ui.notify(`Dispatching synthesizer (${synthModel})…`, "info");
 
   pi.sendUserMessage(
-    await buildGroomInstruction(activeThreadId, dir, brief, rawScouts),
+    await buildGroomInstruction(activeThreadId, dir, brief, rawScouts, synthModel),
     { deliverAs: "followUp" }
   );
 }

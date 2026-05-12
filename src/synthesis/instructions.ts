@@ -14,7 +14,8 @@ export async function buildGroomInstruction(
   threadId: string,
   threadDir: string,
   brief: string,
-  rawScouts: string
+  rawScouts: string,
+  synthModel: string
 ): Promise<string> {
   const synthPrompt = await loadPromptTemplate("synthesizer");
   const rendered = renderTemplate(synthPrompt, {
@@ -26,14 +27,23 @@ export async function buildGroomInstruction(
 
 ## Step 1 — Synthesize
 
-Use the \`subagent\` tool to dispatch the \`research-synthesizer\` agent with this task:
+Use the \`subagent\` tool to dispatch the \`research-synthesizer\` agent with **model \`${synthModel}\`** and this task:
 
 <task>
 ${rendered}
 </task>
 
-After the synthesizer completes, write its full output to:
+After the synthesizer completes, prepend YAML frontmatter and write to:
 \`${join(threadDir, "synthesis.md")}\`
+
+Frontmatter to prepend:
+\`\`\`yaml
+---
+agent: research-synthesizer
+model: ${synthModel}
+thread_id: ${threadId}
+---
+\`\`\`
 
 ## Step 2 — Review with operator
 
@@ -54,7 +64,9 @@ export function buildAlternativesInstruction(
   threadDir: string,
   brief: string,
   synthesis: string,
-  rubric: string | null
+  rubric: string | null,
+  challengerModel: string,
+  devilsModel: string
 ): string {
   const rubricSection = rubric
     ? `## Rubric (operator-defined)\n\n${rubric}`
@@ -98,13 +110,13 @@ Rationale: <2–3 sentences>
 <prose: what you gain and what you give up with the recommended option>
 \`\`\`
 
-4. Run \`research-challenger\` and \`research-devils-advocate\` in **parallel** with these tasks:
+4. Run \`research-challenger\` (model: \`${challengerModel}\`) and \`research-devils-advocate\` (model: \`${devilsModel}\`) in **parallel** with these tasks:
 
 **Challenger task:** Read \`${join(threadDir, "alternatives.md")}\` and the brief above.
-${renderChallengerTask(threadDir)}
+${renderChallengerTask(threadDir, challengerModel)}
 
 **Devil's advocate task:** Read \`${join(threadDir, "alternatives.md")}\` and the brief above.
-${renderDevilsAdvocateTask(threadDir)}
+${renderDevilsAdvocateTask(threadDir, devilsModel)}
 
 5. Write challenger output to \`${join(threadDir, "cross-checks", "challenger.md")}\`
    Write devil's advocate output to \`${join(threadDir, "cross-checks", "devils-advocate.md")}\`
@@ -112,12 +124,12 @@ ${renderDevilsAdvocateTask(threadDir)}
 6. Present the recommendation + cross-check highlights to the operator and ask for confirmation before proceeding to \`/research:document\`.`.trim();
 }
 
-function renderChallengerTask(threadDir: string): string {
-  return `Find the strongest arguments AGAINST the top recommendation. Identify hidden assumptions, missing alternatives, overconfident claims, practical blockers, and second-order effects. Write findings to \`${join(threadDir, "cross-checks", "challenger.md")}\`.`;
+function renderChallengerTask(threadDir: string, model: string): string {
+  return `Find the strongest arguments AGAINST the top recommendation. Identify hidden assumptions, missing alternatives, overconfident claims, practical blockers, and second-order effects. Write findings to \`${join(threadDir, "cross-checks", "challenger.md")}\` with frontmatter \`model: ${model}\`.`;
 }
 
-function renderDevilsAdvocateTask(threadDir: string): string {
-  return `Make the strongest honest case for "do nothing" (Option 0). Cover migration cost, reversibility, opportunity cost, regression risk, and timeline to benefit. Write findings to \`${join(threadDir, "cross-checks", "devils-advocate.md")}\`.`;
+function renderDevilsAdvocateTask(threadDir: string, model: string): string {
+  return `Make the strongest honest case for "do nothing" (Option 0). Cover migration cost, reversibility, opportunity cost, regression risk, and timeline to benefit. Write findings to \`${join(threadDir, "cross-checks", "devils-advocate.md")}\` with frontmatter \`model: ${model}\`.`;
 }
 
 // ── Rubric builder ───────────────────────────────────────────────────────────

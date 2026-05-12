@@ -7,7 +7,8 @@ export async function buildRepoScoutSpec(
   brief: string,
   projectRoot: string,
   relevantPaths: string[],
-  index: number
+  index: number,
+  model: string
 ): Promise<ScoutTaskSpec> {
   const prompt = await loadPrompt("scout-repo", {
     brief,
@@ -19,6 +20,7 @@ export async function buildRepoScoutSpec(
   });
   return {
     agentName: "research-repo-scout",
+    model,
     prompt,
     label: "repo",
     outputFile: scoutOutputPath(threadDir, `repo-${String(index).padStart(3, "0")}`, "repo"),

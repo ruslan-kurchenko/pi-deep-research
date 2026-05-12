@@ -2,7 +2,7 @@
 name: research-synthesizer
 description: Meta-cognitive synthesis agent — applies the 5-step decompose/solve/verify/synthesize/reflect pattern to raw scout findings
 tools: read
-model: claude-sonnet-4-5
+model: anthropic/claude-sonnet-4.6
 thinking: high
 ---
 
