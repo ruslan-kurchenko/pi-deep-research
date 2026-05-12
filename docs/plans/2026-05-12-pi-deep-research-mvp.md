@@ -113,6 +113,7 @@ Transitions are append-only (phase can advance; never auto-rewind).
 | `/research:scout` | `scout` | `brief.md` | `research/NNN-slug/raw/*.md` |
 | `/research:groom` | `groom` | `raw/*.md`, MemPalace | `synthesis.md` |
 | `/research:alternatives` | `alternatives` | `synthesis.md`, `rubric.md` | `alternatives.md`, `cross-checks/*.md` |
+| `/research:document` | `docs` | `alternatives.md`, scope | Recommends format, confirms with operator, routes to explicit command below |
 | `/research:adr <name>` | `docs` | `alternatives.md` | `docs/decisions/adrs/NNN-slug.md` |
 | `/research:rfc` | `docs` | `alternatives.md` | `docs/rfcs/NNN-slug.md` |
 | `/research:design-doc` | `docs` | `alternatives.md` | `docs/design-docs/NNN-slug.md` |
@@ -144,6 +145,7 @@ All agents are pi-subagents profile files installed by the extension at `~/.pi/a
 | `research-challenger` | `read` | sonnet | "What's wrong with this proposal" |
 | `research-devils-advocate` | `read` | sonnet | "Why does 'do nothing' win" |
 | `research-kpi-architect` | `read`, `mcp` (context7) | sonnet | Predicted KPI ranges + measurement plan |
+| `research-doc-advisor` | `read` | haiku | Reads scope + alternatives, recommends ADR/RFC/Design Doc/PRD and explains why |
 
 ---
 
@@ -185,7 +187,7 @@ Three phases. **Operator review checkpoint at the end of each phase.** Pilot the
 - **9.** `src/commands/scout.ts` — `/research:scout` command. Parallel dispatch + writes `raw/*.md` + advances phase.
 - **10.** `src/commands/status.ts` + `src/commands/resume.ts` — read all `.state.json`, render TUI table.
 
-**Pilot at end of Phase 1:** Run `/research:new "voice stack north star: vapi, model, dead-air"` and `/research:scout`. Inspect `research/001-voice-stack-north-star/`. **Stop. Operator review.** Decide whether the dossier shape is actually useful before building Phase 2.
+**Pilot at end of Phase 1:** Use a **synthetic topic** — `"typescript runtime performance: bun vs node vs deno"` — to validate the scaffold without contaminating KAI-specific research. Run `/research:new` + `/research:scout`. Inspect the dossier shape. **Stop. Operator review.** Decide whether the output structure is actually useful before building Phase 2.
 
 ### Phase 2: Synthesis + Grooming (Tasks 11–17)
 
@@ -204,7 +206,7 @@ Three phases. **Operator review checkpoint at the end of each phase.** Pilot the
 - **16.** `src/synthesis/cross-check.ts` — fires `challenger` + `devils-advocate` in parallel against `alternatives.md`.
 - **17.** `src/commands/alternatives.ts` — wires 14+15+16. Operator confirms the ranking before phase advance.
 
-**Pilot at end of Phase 2:** Continue the KAI North Star research. Run `/research:groom`, `/research:alternatives`. **Stop. Operator review.** Verify the alternatives matrix is something you'd actually present to your team.
+**Pilot at end of Phase 2:** **Switch to KAI North Star.** Run `/research:new "voice stack north star: vapi vs direct twilio, model selection, dead-air latency"` then `/research:scout`, `/research:groom`, `/research:alternatives`. **Stop. Operator review.** Verify the alternatives matrix is something you'd actually present to your team.
 
 ### Phase 3: Documents + Measurement (Tasks 18–28)
 
@@ -218,15 +220,16 @@ Three phases. **Operator review checkpoint at the end of each phase.** Pilot the
 
 - **18.** `src/docs/render.ts` — generic markdown template renderer (`{{placeholder}}` substitution; no Handlebars). Tests: nested placeholders, missing keys.
 - **19.** `templates/adr.md`, `templates/rfc.md`, `templates/design-doc.md`, `templates/prd.md`, `templates/measurement.md`, `templates/evaluation.md` — mattpocock-style templates.
-- **20.** `src/docs/adr.ts` + `src/commands/adr.ts` — produce single-decision ADR from alternatives ranking. Operator picks which alternatives become ADRs.
-- **21.** `src/docs/rfc.ts` + `src/commands/rfc.ts` — multi-decision RFC referencing ADRs.
-- **22.** `src/docs/c4.ts` — drives `research-architect` agent to produce Mermaid C4 context + container diagrams. Tests: parses agent output for valid Mermaid blocks.
-- **23.** `src/docs/design-doc.ts` + `src/commands/design-doc.ts` — big-scope design doc with C4 sections injected.
-- **24.** `src/docs/prd.ts` + `src/commands/prd.ts` — PRD referencing one design doc + N ADRs + measurement contract.
-- **25.** `src/measurement/adapter.ts` — interface: `predict(synthesis) → KPIs`, `measure(contract) → results`, `report(contract, results) → delta`.
-- **26.** `src/measurement/manual.ts` — adapter that stubs the report with `TODO: fill from <source>`. Always succeeds.
-- **27.** `src/measurement/langfuse.ts` — adapter that queries Langfuse traces/scores via `LANGFUSE_BASE_URL` + `LANGFUSE_PUBLIC_KEY` + `LANGFUSE_SECRET_KEY` env. Configurable score names + trace filters.
-- **28.** `src/commands/contract.ts` + `src/commands/evaluate.ts` — wire 25–27. On evaluate completion, write MemPalace drawer in project wing with predicted vs. actual.
+- **20.** `src/commands/document.ts` — smart router. Dispatches `research-doc-advisor` against `brief.md` + `alternatives.md`; advisor returns recommended format + rationale (scored: ADR if ≤2 decisions + small scope, RFC if multi-decision, Design Doc if arch-wide, PRD if project plan). Presents recommendation + rationale to operator with `ctx.ui.select`. Routes to the chosen explicit command below.
+- **21.** `src/docs/adr.ts` + `src/commands/adr.ts` — produce single-decision ADR from alternatives ranking. Operator picks which alternatives become ADRs.
+- **22 (renumbered).** `src/docs/rfc.ts` + `src/commands/rfc.ts` — multi-decision RFC referencing ADRs.
+- **23 (renumbered).** `src/docs/c4.ts` — drives `research-architect` agent to produce Mermaid C4 context + container diagrams. Tests: parses agent output for valid Mermaid blocks.
+- **24 (renumbered).** `src/docs/design-doc.ts` + `src/commands/design-doc.ts` — big-scope design doc with C4 sections injected.
+- **25 (renumbered).** `src/docs/prd.ts` + `src/commands/prd.ts` — PRD referencing one design doc + N ADRs + measurement contract.
+- **26 (renumbered).** `src/measurement/adapter.ts` — interface: `predict(synthesis) → KPIs`, `measure(contract) → results`, `report(contract, results) → delta`.
+- **27 (renumbered).** `src/measurement/manual.ts` — adapter that stubs the report with `TODO: fill from <source>`. Always succeeds.
+- **28 (renumbered).** `src/measurement/langfuse.ts` — adapter that queries Langfuse traces/scores via `LANGFUSE_BASE_URL` + `LANGFUSE_PUBLIC_KEY` + `LANGFUSE_SECRET_KEY` env. Configurable score names + trace filters.
+- **29 (renumbered).** `src/commands/contract.ts` + `src/commands/evaluate.ts` — wire 25–27. On evaluate completion, write MemPalace drawer in project wing with predicted vs. actual.
 
 **Pilot at end of Phase 3:** Produce the KAI North Star RFC + Design Doc + measurement contract. **Stop. Operator review.** This is the real first output.
 
@@ -308,7 +311,8 @@ pi-deep-research/
 │       ├── synthesizer.md
 │       ├── challenger.md
 │       ├── devils-advocate.md
-│       └── kpi-architect.md
+│       ├── kpi-architect.md
+│       └── doc-advisor.md
 ├── agents/                            # Installed to ~/.pi/agent/agents/ by user
 │   ├── research-web-scout.md
 │   ├── research-oss-scout.md
@@ -318,7 +322,8 @@ pi-deep-research/
 │   ├── research-architect.md
 │   ├── research-challenger.md
 │   ├── research-devils-advocate.md
-│   └── research-kpi-architect.md
+│   ├── research-kpi-architect.md
+│   └── research-doc-advisor.md
 └── tests/
     ├── extension.smoke.test.ts
     ├── lib/paths.test.ts
