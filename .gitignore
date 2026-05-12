@@ -6,3 +6,11 @@ dist/
 .env.local
 coverage/
 .vitest-cache/
+.tmp-*/
+
+# Research artifacts are project-local — excluded from the package itself
+research/
+
+# Project model config (not the example file)
+.pi/deep-research/models.json
+!.pi/deep-research/models.json.example

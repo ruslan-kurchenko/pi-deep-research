@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { ensureAgentsInstalled } from "./lib/agents-installer.js";
 import { runNew } from "./commands/new.js";
 import { runScout } from "./commands/scout.js";
 import { runGroom } from "./commands/groom.js";
@@ -37,6 +38,17 @@ async function requireActive(
 }
 
 export default function piDeepResearch(pi: ExtensionAPI) {
+  // Install bundled agent profiles to ~/.pi/agent/agents/ on every load.
+  // Idempotent — skips files that haven't changed.
+  ensureAgentsInstalled().then(({ installed, updated }) => {
+    if (installed.length > 0)
+      console.log(`[pi-deep-research] Installed agents: ${installed.join(", ")}`);
+    if (updated.length > 0)
+      console.log(`[pi-deep-research] Updated agents: ${updated.join(", ")}`);
+  }).catch(() => {
+    // Non-fatal — user can copy agents manually per docs/SETUP.md
+  });
+
   // ── /research:new ──────────────────────────────────────────────────────────
   pi.registerCommand("research:new", {
     description: "Start a new research thread — grill-me brief + scope selection",

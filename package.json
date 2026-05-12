@@ -1,11 +1,36 @@
 {
   "name": "pi-deep-research",
   "version": "0.1.0",
-  "description": "Deep-research workflow extension for pi — parallel scouts, synthesis, alternatives matrix, ADR/RFC/Design Doc/PRD with KPI contracts",
+  "description": "Deep-research workflow extension for pi — parallel scouts, meta-cognitive synthesis, alternatives matrix, cross-family oracle review, ADR/RFC/Design Doc/PRD with KPI contracts",
   "license": "MIT",
+  "author": "Ruslan Kurchenko",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ruslan-kurchenko/pi-deep-research.git"
+  },
+  "homepage": "https://github.com/ruslan-kurchenko/pi-deep-research#readme",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "research",
+    "deep-research",
+    "adr",
+    "rfc",
+    "architecture",
+    "ai-agents"
+  ],
   "type": "module",
+  "files": [
+    "src/**/*.ts",
+    "agents/**/*.md",
+    "templates/**/*.md",
+    "README.md",
+    "CHANGELOG.md"
+  ],
   "pi": {
-    "extensions": ["./src/index.ts"]
+    "extensions": ["./src/index.ts"],
+    "prompts": ["./templates/prompts"]
   },
   "scripts": {
     "test": "./node_modules/.bin/vitest run",
@@ -16,12 +41,15 @@
     "format": "./node_modules/.bin/biome format --write src tests",
     "typecheck": "./node_modules/.bin/tsc --noEmit"
   },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
   "dependencies": {
-    "@earendil-works/pi-coding-agent": "^0.74.0",
     "typebox": "^1.1.24"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
+    "@earendil-works/pi-coding-agent": "^0.74.0",
     "@types/node": "^22.0.0",
     "@vitest/coverage-v8": "^3.0.0",
     "typescript": "^5.7.0",
