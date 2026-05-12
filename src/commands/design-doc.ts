@@ -6,7 +6,11 @@ import { readOptional } from "../lib/files.js";
 import { threadDir, slugify } from "../lib/paths.js";
 import { buildDesignDocInstruction } from "../docs/instructions.js";
 import { docDir, docOutputPath, nextDocNumber } from "../docs/docpaths.js";
-import { getThread, updateThreadPhase, updateThreadLinks } from "../state/store.js";
+import { resolveAgentModel } from "../config/models.js";
+import { resolveWithFallback } from "../config/fallback.js";
+import { buildOracleInstruction, buildOracleContext, ensureOracleDir } from "../docs/oracle.js";
+import { appendOracleGate } from "../docs/oracle-gate.js";
+import { getThread, updateThreadPhase, updateThreadLinks, logModelUsage, logOracleReview } from "../state/store.js";
 
 export async function runDesignDoc(
   _args: string,
@@ -36,10 +40,26 @@ export async function runDesignDoc(
   await updateThreadPhase(projectRoot, activeThreadId, "docs");
   await updateThreadLinks(projectRoot, activeThreadId, { designDoc: outputPath });
 
-  ctx.ui.notify(`Generating Design Doc…`, "info");
+  const oracleModel = await resolveWithFallback(
+    await resolveAgentModel("research-oracle", projectRoot),
+    "research-oracle", ctx, projectRoot, activeThreadId
+  );
+  await ensureOracleDir(dir);
+  const now = new Date().toISOString();
+  await logModelUsage(projectRoot, activeThreadId, { agent: "research-oracle", model: oracleModel, command: "design-doc:oracle", timestamp: now });
+  await logOracleReview(projectRoot, activeThreadId, { gate: "after-doc", outputPath: join(dir, "oracle", "after-doc.md"), timestamp: now });
+  const oracleCtx = await buildOracleContext(dir, "after-doc", outputPath);
+  const oracleInst = await buildOracleInstruction(
+    { threadId: activeThreadId, threadDir: dir, gate: "after-doc", brief, oracleModel }, oracleCtx
+  );
+
+  ctx.ui.notify(`Generating Design Doc → oracle (${oracleModel}) after…`, "info");
 
   pi.sendUserMessage(
-    await buildDesignDocInstruction({ threadId: activeThreadId, threadDir: dir, brief, synthesis, alternatives, outputPath, docNum, slug, today }),
+    appendOracleGate(
+      await buildDesignDocInstruction({ threadId: activeThreadId, threadDir: dir, brief, synthesis, alternatives, outputPath, docNum, slug, today }),
+      oracleInst
+    ),
     { deliverAs: "followUp" }
   );
 }

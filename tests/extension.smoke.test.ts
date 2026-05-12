@@ -10,6 +10,7 @@ const ALL_COMMANDS = [
   "research:rfc",
   "research:design-doc",
   "research:prd",
+  "research:oracle",
   "research:contract",
   "research:evaluate",
   "research:status",

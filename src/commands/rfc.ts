@@ -6,7 +6,11 @@ import { readOptional } from "../lib/files.js";
 import { threadDir, slugify } from "../lib/paths.js";
 import { buildRfcInstruction } from "../docs/instructions.js";
 import { docDir, docOutputPath, nextDocNumber } from "../docs/docpaths.js";
-import { getThread, updateThreadPhase, updateThreadLinks } from "../state/store.js";
+import { resolveAgentModel } from "../config/models.js";
+import { resolveWithFallback } from "../config/fallback.js";
+import { buildOracleInstruction, buildOracleContext, ensureOracleDir } from "../docs/oracle.js";
+import { appendOracleGate } from "../docs/oracle-gate.js";
+import { getThread, updateThreadPhase, updateThreadLinks, logModelUsage, logOracleReview } from "../state/store.js";
 
 export async function runRfc(
   _args: string,
@@ -36,10 +40,26 @@ export async function runRfc(
   await updateThreadPhase(projectRoot, activeThreadId, "docs");
   await updateThreadLinks(projectRoot, activeThreadId, { rfc: outputPath });
 
-  ctx.ui.notify(`Generating RFC-${String(docNum).padStart(3, "0")}…`, "info");
+  const oracleModel = await resolveWithFallback(
+    await resolveAgentModel("research-oracle", projectRoot),
+    "research-oracle", ctx, projectRoot, activeThreadId
+  );
+  await ensureOracleDir(dir);
+  const now = new Date().toISOString();
+  await logModelUsage(projectRoot, activeThreadId, { agent: "research-oracle", model: oracleModel, command: "rfc:oracle", timestamp: now });
+  await logOracleReview(projectRoot, activeThreadId, { gate: "after-doc", outputPath: join(dir, "oracle", "after-doc.md"), timestamp: now });
+  const oracleCtx = await buildOracleContext(dir, "after-doc", outputPath);
+  const oracleInst = await buildOracleInstruction(
+    { threadId: activeThreadId, threadDir: dir, gate: "after-doc", brief, oracleModel }, oracleCtx
+  );
+
+  ctx.ui.notify(`Generating RFC-${String(docNum).padStart(3, "0")} → oracle (${oracleModel}) after…`, "info");
 
   pi.sendUserMessage(
-    await buildRfcInstruction({ threadId: activeThreadId, threadDir: dir, brief, synthesis, alternatives, outputPath, docNum, slug, today }),
+    appendOracleGate(
+      await buildRfcInstruction({ threadId: activeThreadId, threadDir: dir, brief, synthesis, alternatives, outputPath, docNum, slug, today }),
+      oracleInst
+    ),
     { deliverAs: "followUp" }
   );
 }

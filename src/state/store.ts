@@ -19,6 +19,20 @@ export interface ModelUsageEntry {
   timestamp: string;
 }
 
+export type OracleDecision =
+  | "accept_all"
+  | "accept_some"
+  | "dismiss"
+  | "iterate";
+
+export interface OracleReview {
+  gate: string;
+  outputPath: string;
+  verdict?: string;
+  operatorDecision?: OracleDecision;
+  timestamp: string;
+}
+
 export interface ResearchThread {
   id: string;
   topic: string;
@@ -37,6 +51,8 @@ export interface ResearchThread {
   modelUsage: ModelUsageEntry[];
   /** Operator-confirmed fallback per provider (cached to avoid re-prompting). */
   modelFallbacks: Record<string, string>;
+  /** Oracle review entries per gate. */
+  oracleReviews: OracleReview[];
 }
 
 const STATE_FILE = ".state.json";
@@ -64,6 +80,7 @@ export async function createThread(
     linkedDocs: {},
     modelUsage: [],
     modelFallbacks: {},
+    oracleReviews: [],
   };
 
   await writeFile(join(dir, STATE_FILE), JSON.stringify(thread, null, 2));
@@ -103,6 +120,18 @@ export async function logModelUsage(
   const thread = await getThread(projectRoot, id);
   if (!thread) throw new Error(`Thread not found: ${id}`);
   thread.modelUsage = [...(thread.modelUsage ?? []), entry];
+  const file = join(threadDir(projectRoot, id), STATE_FILE);
+  await writeFile(file, JSON.stringify(thread, null, 2));
+}
+
+export async function logOracleReview(
+  projectRoot: string,
+  id: string,
+  review: OracleReview
+): Promise<void> {
+  const thread = await getThread(projectRoot, id);
+  if (!thread) throw new Error(`Thread not found: ${id}`);
+  thread.oracleReviews = [...(thread.oracleReviews ?? []), review];
   const file = join(threadDir(projectRoot, id), STATE_FILE);
   await writeFile(file, JSON.stringify(thread, null, 2));
 }

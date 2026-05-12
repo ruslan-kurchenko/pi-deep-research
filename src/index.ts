@@ -9,6 +9,7 @@ import { runAdr } from "./commands/adr.js";
 import { runRfc } from "./commands/rfc.js";
 import { runDesignDoc } from "./commands/design-doc.js";
 import { runPrd } from "./commands/prd.js";
+import { runOracle } from "./commands/oracle.js";
 import { runContract } from "./commands/contract.js";
 import { runEvaluate } from "./commands/evaluate.js";
 import { runStatus, runResume } from "./commands/status.js";
@@ -121,6 +122,16 @@ export default function piDeepResearch(pi: ExtensionAPI) {
       const id = await requireActive(ctx, "prd");
       if (!id) return;
       await runPrd(args ?? "", ctx, pi, ctx.cwd, id);
+    },
+  });
+
+  // ── /research:oracle ────────────────────────────────────────────────────────
+  pi.registerCommand("research:oracle", {
+    description: "Cross-family adversarial review via GPT-5.5 — callable at any phase",
+    handler: async (args, ctx) => {
+      const id = await requireActive(ctx, "oracle");
+      if (!id) return;
+      await runOracle(args ?? "", ctx, pi, ctx.cwd, id);
     },
   });
 

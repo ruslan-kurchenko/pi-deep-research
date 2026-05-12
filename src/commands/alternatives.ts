@@ -10,7 +10,9 @@ import {
 import { loadRubric, saveRubric } from "../synthesis/rubric.js";
 import { resolveAgentModels } from "../config/models.js";
 import { resolveWithFallback } from "../config/fallback.js";
-import { getThread, updateThreadPhase, logModelUsage } from "../state/store.js";
+import { resolveAgentModel } from "../config/models.js";
+import { buildOracleInstruction, buildOracleContext, ensureOracleDir } from "../docs/oracle.js";
+import { getThread, updateThreadPhase, logModelUsage, logOracleReview } from "../state/store.js";
 
 export async function runAlternatives(
   _args: string,
@@ -76,13 +78,35 @@ export async function runAlternatives(
   await logModelUsage(projectRoot, activeThreadId, { agent: "research-challenger", model: challengerModel, command: "alternatives", timestamp: now });
   await logModelUsage(projectRoot, activeThreadId, { agent: "research-devils-advocate", model: devilsModel, command: "alternatives", timestamp: now });
 
+  // Resolve oracle model for mandatory gate (iii)
+  const oracleDefault = await resolveAgentModel("research-oracle", projectRoot);
+  const oracleModel = await resolveWithFallback(
+    oracleDefault, "research-oracle", ctx, projectRoot, activeThreadId
+  );
+
+  await ensureOracleDir(dir);
+  await logModelUsage(projectRoot, activeThreadId, { agent: "research-oracle", model: oracleModel, command: "alternatives:oracle", timestamp: now });
+  await logOracleReview(projectRoot, activeThreadId, {
+    gate: "after-alternatives",
+    outputPath: join(dir, "oracle", "after-alternatives.md"),
+    timestamp: now,
+  });
+
+  const oracleContextMd = await buildOracleContext(dir, "after-alternatives");
+  const oracleInstruction = await buildOracleInstruction(
+    { threadId: activeThreadId, threadDir: dir, gate: "after-alternatives", brief, oracleModel },
+    oracleContextMd
+  );
+
   ctx.ui.notify(
-    `Dispatching alternatives matrix + cross-checks…\n  challenger + devils-advocate → ${challengerModel}`,
+    `Dispatching alternatives matrix + cross-checks…\n  challenger + devils-advocate → ${challengerModel}\n  oracle → ${oracleModel} (after alternatives complete)`,
     "info"
   );
 
   pi.sendUserMessage(
-    buildAlternativesInstruction(activeThreadId, dir, brief, synthesis, rubric, challengerModel, devilsModel),
+    buildAlternativesInstruction(activeThreadId, dir, brief, synthesis, rubric, challengerModel, devilsModel) +
+      `\n\n---\n\n## After alternatives + cross-checks complete — run oracle (gate iii)\n\n` +
+      oracleInstruction,
     { deliverAs: "followUp" }
   );
 }
