@@ -5,6 +5,7 @@ import { join } from "node:path";
 export function slugify(topic: string): string {
   return topic
     .toLowerCase()
+    .replace(/@[a-z0-9/_-]+/g, (m) => m.replace(/@/g, "").replace(/\//g, "-"))  // @services/kai → services-kai
     .replace(/[^a-z0-9\s-]/g, "")
     .trim()
     .replace(/[\s-]+/g, "-")

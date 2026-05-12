@@ -28,6 +28,12 @@ describe("slugify", () => {
     expect(slugify("Node.js: perf (2026)!")).toBe("nodejs-perf-2026");
   });
 
+  it("handles @scope/path references", () => {
+    expect(slugify("Why do we need VAPI for @services/kai?")).toBe(
+      "why-do-we-need-vapi-for-services-kai"
+    );
+  });
+
   it("collapses multiple hyphens", () => {
     expect(slugify("bun  vs   node")).toBe("bun-vs-node");
   });
