@@ -180,3 +180,25 @@ export function validateScoutInterface(exported: unknown): string | null {
 
   return null; // valid
 }
+
+// ── Registry support types ───────────────────────────────────────────────────
+
+/** Canonical form of a config.scouts[] entry (after normalization). */
+export interface ScoutSpec {
+  /**
+   * Built-in id ("web", "oss", "repo") or resolved absolute path to a .js file.
+   * Relative paths are resolved against projectRoot before use.
+   */
+  source: string;
+  /** Opaque plugin config passed to isAvailable() and build*Spec(). */
+  pluginConfig?: unknown;
+}
+
+/** Result of Stage 1 loading. */
+export type LoadResult =
+  | {
+      ok: true;
+      scout: ScoutDefinition;
+      trustSource: "builtin" | "project-local" | "external";
+    }
+  | { ok: false; id: string; error: string };

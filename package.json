@@ -39,7 +39,9 @@
     "lint": "./node_modules/.bin/biome check src tests",
     "lint:fix": "./node_modules/.bin/biome check --write src tests",
     "format": "./node_modules/.bin/biome format --write src tests",
-    "typecheck": "./node_modules/.bin/tsc --noEmit"
+    "typecheck": "./node_modules/.bin/tsc --noEmit",
+    "smoke:no-memory": "bun run scripts/smoke-no-memory.mjs",
+    "smoke:doctor-json": "bun run scripts/smoke-doctor-json.mjs"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*"
