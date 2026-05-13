@@ -6,6 +6,7 @@ import { threadDir, slugify } from "../lib/paths.js";
 import { buildEvaluateInstruction } from "../docs/instructions.js";
 import { docDir, docOutputPath, nextDocNumber } from "../docs/docpaths.js";
 import { getThread, updateThreadPhase, updateThreadLinks } from "../state/store.js";
+import { loadConfig } from "../config/config.js";
 
 export async function runEvaluate(
   _args: string,
@@ -47,6 +48,8 @@ export async function runEvaluate(
       ? "langfuse"
       : "manual";
 
+  const config = await loadConfig(projectRoot);
+
   await mkdir(docDir(projectRoot, "evaluation"), { recursive: true });
   await updateThreadPhase(projectRoot, activeThreadId, "evaluate");
   await updateThreadLinks(projectRoot, activeThreadId, { evaluation: outputPath });
@@ -59,7 +62,8 @@ export async function runEvaluate(
   pi.sendUserMessage(
     buildEvaluateInstruction(
       activeThreadId, contractPath, contractContent,
-      outputPath, today, adapterName, projectRoot
+      outputPath, today, adapterName, projectRoot,
+      config.mempalaceUrl
     ),
     { deliverAs: "followUp" }
   );

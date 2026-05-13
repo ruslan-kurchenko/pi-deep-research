@@ -60,7 +60,7 @@ export async function runPrd(
   pi.sendUserMessage(
     appendOracleGate(
       await buildPrdInstruction(
-        { threadId: activeThreadId, threadDir: dir, brief, synthesis, alternatives: "", outputPath, docNum, slug, today },
+        { threadId: activeThreadId, threadDir: dir, brief, synthesis, alternatives: "", outputPath, docNum, slug, today, projectRoot },
         linkedPaths
       ),
       oracleInst

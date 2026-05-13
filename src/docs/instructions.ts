@@ -19,12 +19,35 @@ interface DocContext {
   docNum: number;
   slug: string;
   today: string;
+  /** Project root for resolving git user.name — falls back to "Unknown" */
+  projectRoot?: string;
+}
+
+/**
+ * Resolve the author name from git config user.name.
+ * Falls back to "Unknown" if git is unavailable or not configured.
+ */
+async function resolveAuthorName(projectRoot?: string): Promise<string> {
+  try {
+    const { execFile } = await import("node:child_process");
+    const { promisify } = await import("node:util");
+    const execFileAsync = promisify(execFile);
+    const { stdout } = await execFileAsync("git", ["config", "user.name"], {
+      cwd: projectRoot ?? process.cwd(),
+    });
+    const name = stdout.trim();
+    if (name) return name;
+  } catch {
+    // git unavailable or user.name not set
+  }
+  return "Unknown";
 }
 
 // ── ADR ──────────────────────────────────────────────────────────────────────
 
 export async function buildAdrInstruction(ctx: DocContext, title: string): Promise<string> {
   const template = await loadDocTemplate("adr");
+  const authorName = await resolveAuthorName(ctx.projectRoot);
   return `Run /research:adr on thread \`${ctx.threadId}\`.
 
 ## Context files
@@ -56,7 +79,7 @@ ${renderTemplate(template, {
   title: title || ctx.slug,
   date: ctx.today,
   status: "Proposed",
-  deciders: "Ruslan Kurchenko",
+  deciders: authorName,
   research_thread_id: ctx.threadId,
   context: "<!-- fill from brief + synthesis -->",
   decision: "<!-- fill from recommendation in alternatives.md -->",
@@ -73,6 +96,7 @@ ${renderTemplate(template, {
 
 export async function buildRfcInstruction(ctx: DocContext): Promise<string> {
   const template = await loadDocTemplate("rfc");
+  const authorName = await resolveAuthorName(ctx.projectRoot);
   return `Run /research:rfc on thread \`${ctx.threadId}\`.
 
 ## Context files
@@ -108,7 +132,7 @@ ${renderTemplate(template, {
   title: ctx.slug.replace(/-/g, " "),
   date: ctx.today,
   status: "Draft",
-  authors: "Ruslan Kurchenko",
+  authors: authorName,
   research_thread_id: ctx.threadId,
   summary: "<!-- fill -->",
   motivation: "<!-- fill from brief + synthesis -->",
@@ -127,6 +151,7 @@ ${renderTemplate(template, {
 
 export async function buildDesignDocInstruction(ctx: DocContext): Promise<string> {
   const template = await loadDocTemplate("design-doc");
+  const authorName = await resolveAuthorName(ctx.projectRoot);
   return `Run /research:design-doc on thread \`${ctx.threadId}\`.
 
 ## Context files
@@ -164,7 +189,7 @@ ${renderTemplate(template, {
   title: ctx.slug.replace(/-/g, " "),
   date: ctx.today,
   status: "Draft",
-  authors: "Ruslan Kurchenko",
+  authors: authorName,
   research_thread_id: ctx.threadId,
   tldr: "<!-- 2–3 sentence summary of the proposal -->",
   goals: "<!-- fill from brief -->",
@@ -194,6 +219,7 @@ export async function buildPrdInstruction(
   linkedDocPaths: string[]
 ): Promise<string> {
   const template = await loadDocTemplate("prd");
+  const authorName = await resolveAuthorName(ctx.projectRoot);
   return `Run /research:prd on thread \`${ctx.threadId}\`.
 
 ## Context files
@@ -224,7 +250,7 @@ ${renderTemplate(template, {
   title: ctx.slug.replace(/-/g, " "),
   date: ctx.today,
   status: "Draft",
-  authors: "Ruslan Kurchenko",
+  authors: authorName,
   research_thread_id: ctx.threadId,
   problem: "<!-- fill from brief motivation -->",
   users_affected: "<!-- fill: who experiences this today + the proposed change -->",
@@ -341,7 +367,8 @@ export function buildEvaluateInstruction(
   outputPath: string,
   today: string,
   adapterName: string,
-  projectRoot: string
+  projectRoot: string,
+  mempalaceUrl?: string
 ): string {
   const projectName = projectRoot.replace(/\/$/, "").split("/").pop() ?? "project";
   const projectWing = `project-${projectName}`;
@@ -359,6 +386,15 @@ export function buildEvaluateInstruction(
    \`actual: TODO — measure via: <measurementMethod from contract>\`
    The operator fills these in after running the measurement method described in the contract.`;
 
+  const mempalaceStep = mempalaceUrl
+    ? `4. After writing, use the \`mcp\` tool to call \`mempalace_add_drawer\` with:
+   - wing: "${projectWing}"
+   - room: "Research"
+   - title: "Evaluation: ${threadId}"
+   - content: 3–5 sentence summary of predicted vs actual results
+   - tags: ["evaluation", "measurement", "${threadId}"]`
+    : `4. MemPalace is not configured (no mempalaceUrl in .pi/deep-research/config.json). Skip this step.`;
+
   return `Run /research:evaluate on thread \`${threadId}\`.
 
 ## Measurement contract
@@ -371,12 +407,7 @@ ${contractContent}
    ${adapterInstructions}
 3. Write the evaluation report to: \`${outputPath}\`
    Create parent directories if needed.
-4. After writing, use the \`mcp\` tool to call \`mempalace_add_drawer\` with:
-   - wing: "${projectWing}"
-   - room: "Research"
-   - title: "Evaluation: ${threadId}"
-   - content: 3–5 sentence summary of predicted vs actual results
-   - tags: ["evaluation", "measurement", "${threadId}"]
+${mempalaceStep}
 
 Be honest where predictions were wrong and note why in the analysis section.`.trim();
 }

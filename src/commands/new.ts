@@ -26,9 +26,9 @@ export async function runNew(
     return;
   }
 
-  // 1. Ask for scope
+  // 1. Ask for scope (single-select — the pi API provides select, not multiSelect)
   const scope = await ctx.ui.select(
-    "Research scope (select all that apply — pick the primary one first):",
+    "Research scope (primary):",
     [...SCOPE_OPTIONS]
   );
   if (!scope) return;

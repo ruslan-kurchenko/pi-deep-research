@@ -53,7 +53,7 @@ export async function runDesignDoc(
 
   pi.sendUserMessage(
     appendOracleGate(
-      await buildDesignDocInstruction({ threadId: activeThreadId, threadDir: dir, brief, synthesis, alternatives, outputPath, docNum, slug, today }),
+      await buildDesignDocInstruction({ threadId: activeThreadId, threadDir: dir, brief, synthesis, alternatives, outputPath, docNum, slug, today, projectRoot }),
       oracleInst
     ),
     { deliverAs: "followUp" }

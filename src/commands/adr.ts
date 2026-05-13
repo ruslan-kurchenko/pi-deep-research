@@ -41,7 +41,7 @@ export async function runAdr(
 
   pi.sendUserMessage(
     await buildAdrInstruction(
-      { threadId: activeThreadId, threadDir: dir, brief, synthesis, alternatives, outputPath, docNum, slug, today },
+      { threadId: activeThreadId, threadDir: dir, brief, synthesis, alternatives, outputPath, docNum, slug, today, projectRoot },
       title
     ),
     { deliverAs: "followUp" }

@@ -11,6 +11,7 @@ import { buildMemoryScoutSpec } from "../scouts/memory.js";
 import { resolveAgentModels } from "../config/models.js";
 import { resolveWithFallback } from "../config/fallback.js";
 import { getThread, updateThreadPhase, logModelUsage } from "../state/store.js";
+import { loadConfig } from "../config/config.js";
 
 const SCOUT_AGENTS = [
   "research-web-scout",
@@ -20,7 +21,7 @@ const SCOUT_AGENTS = [
 ] as const;
 
 export async function runScout(
-  _args: string,
+  args: string,
   ctx: ExtensionCommandContext,
   pi: ExtensionAPI,
   projectRoot: string,
@@ -64,13 +65,24 @@ export async function runScout(
     );
   }
 
+  // Parse optional space-separated paths from args (e.g. /research:scout src/commands src/scouts)
+  const relevantPaths = args.trim() ? args.trim().split(/\s+/) : [];
+
+  // Load project config — determines whether memory scout is enabled
+  const config = await loadConfig(projectRoot);
+
   // Build scout task specs with resolved models
-  const specs = await Promise.all([
+  const baseSpecs = await Promise.all([
     buildWebScoutSpec(dir, brief, 1, models["research-web-scout"] as string),
     buildOssScoutSpec(dir, brief, 1, models["research-oss-scout"] as string),
-    buildRepoScoutSpec(dir, brief, projectRoot, [], 1, models["research-repo-scout"] as string),
-    buildMemoryScoutSpec(dir, brief, projectWing, 1, models["research-memory-scout"] as string),
+    buildRepoScoutSpec(dir, brief, projectRoot, relevantPaths, 1, models["research-repo-scout"] as string),
   ]);
+
+  const memorySpec = config.mempalaceUrl
+    ? await buildMemoryScoutSpec(dir, brief, projectWing, 1, models["research-memory-scout"] as string)
+    : null;
+
+  const specs = memorySpec ? [...baseSpecs, memorySpec] : baseSpecs;
 
   // Advance phase and log model usage
   await updateThreadPhase(projectRoot, activeThreadId, "scout");
@@ -84,10 +96,16 @@ export async function runScout(
     });
   }
 
+  const pathsNote = relevantPaths.length > 0
+    ? `\n  repo paths: ${relevantPaths.join(", ")}`
+    : "";
+  const scoutNames = config.mempalaceUrl ? "web, oss, repo, memory" : "web, oss, repo";
+  const memoryNote = config.mempalaceUrl
+    ? ""
+    : "Memory scout disabled — set mempalaceUrl in .pi/deep-research/config.json to enable.\n";
   ctx.ui.notify(
-    `4 scouts dispatched in parallel.\n` +
-    `  web + memory → ${models["research-web-scout"]}\n` +
-    `  oss + repo → ${models["research-oss-scout"]}\n` +
+    `${specs.length} scouts dispatched (${scoutNames}).${pathsNote}\n` +
+    memoryNote +
     `When all done, run /research:groom`,
     "info"
   );

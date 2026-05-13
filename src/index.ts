@@ -1,3 +1,4 @@
+import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { ensureAgentsInstalled } from "./lib/agents-installer.js";
@@ -14,7 +15,10 @@ import { runOracle } from "./commands/oracle.js";
 import { runContract } from "./commands/contract.js";
 import { runEvaluate } from "./commands/evaluate.js";
 import { runStatus, runResume } from "./commands/status.js";
-import { getActiveThread } from "./state/store.js";
+import { getActiveThread, getThread } from "./state/store.js";
+import { canRunCommand } from "./state/tracker.js";
+import type { ResearchCommand } from "./state/tracker.js";
+import { threadDir } from "./lib/paths.js";
 
 function inferProjectWing(cwd: string): string {
   const parts = cwd.replace(/\/$/, "").split("/");
@@ -22,9 +26,11 @@ function inferProjectWing(cwd: string): string {
   return `project-${name}`;
 }
 
+type CommandCtx = Parameters<Parameters<ExtensionAPI["registerCommand"]>[1]["handler"]>[1];
+
 /** Resolve active thread or notify and bail. */
 async function requireActive(
-  ctx: Parameters<Parameters<ExtensionAPI["registerCommand"]>[1]["handler"]>[1],
+  ctx: CommandCtx,
   label: string
 ): Promise<string | null> {
   const id = await getActiveThread(ctx.cwd);
@@ -33,6 +39,51 @@ async function requireActive(
     return null;
   }
   return id;
+}
+
+/**
+ * Phase-gate a command against the current thread state.
+ * Returns false (and notifies the operator) if the command is blocked.
+ * Returns true if the command may proceed.
+ * If isRerun, prompts the operator to confirm before continuing.
+ */
+async function guardCommand(
+  command: ResearchCommand,
+  ctx: CommandCtx,
+  projectRoot: string,
+  threadId: string
+): Promise<boolean> {
+  const thread = await getThread(projectRoot, threadId);
+  if (!thread) {
+    ctx.ui.notify(`No active thread: ${threadId}`, "error");
+    return false;
+  }
+
+  let existingFiles = new Set<string>();
+  try {
+    const dir = threadDir(projectRoot, threadId);
+    const files = await readdir(dir);
+    existingFiles = new Set(files);
+  } catch {
+    // threadDir may not exist yet
+  }
+
+  const result = canRunCommand(command, thread, existingFiles);
+
+  if (!result.allowed) {
+    ctx.ui.notify(result.errorMessage ?? `Cannot run '${command}' in current phase.`, "error");
+    return false;
+  }
+
+  if (result.isRerun) {
+    const ok = await ctx.ui.confirm(
+      `Re-run ${command}?`,
+      `Thread is past the normal phase for '${command}' (current: '${thread.phase}'). Re-run anyway?`
+    );
+    if (!ok) return false;
+  }
+
+  return true;
 }
 
 export default function piDeepResearch(pi: ExtensionAPI) {
@@ -61,6 +112,7 @@ export default function piDeepResearch(pi: ExtensionAPI) {
     handler: async (args, ctx) => {
       const id = await requireActive(ctx, "scout");
       if (!id) return;
+      if (!await guardCommand("scout", ctx, ctx.cwd, id)) return;
       await runScout(args ?? "", ctx, pi, ctx.cwd, id, inferProjectWing(ctx.cwd));
     },
   });
@@ -71,6 +123,7 @@ export default function piDeepResearch(pi: ExtensionAPI) {
     handler: async (args, ctx) => {
       const id = await requireActive(ctx, "groom");
       if (!id) return;
+      if (!await guardCommand("groom", ctx, ctx.cwd, id)) return;
       await runGroom(args ?? "", ctx, pi, ctx.cwd, id);
     },
   });
@@ -81,6 +134,7 @@ export default function piDeepResearch(pi: ExtensionAPI) {
     handler: async (args, ctx) => {
       const id = await requireActive(ctx, "alternatives");
       if (!id) return;
+      if (!await guardCommand("alternatives", ctx, ctx.cwd, id)) return;
       await runAlternatives(args ?? "", ctx, pi, ctx.cwd, id);
     },
   });
@@ -91,6 +145,7 @@ export default function piDeepResearch(pi: ExtensionAPI) {
     handler: async (args, ctx) => {
       const id = await requireActive(ctx, "document");
       if (!id) return;
+      if (!await guardCommand("document", ctx, ctx.cwd, id)) return;
       await runDocument(args ?? "", ctx, pi, ctx.cwd, id);
     },
   });
@@ -101,6 +156,7 @@ export default function piDeepResearch(pi: ExtensionAPI) {
     handler: async (args, ctx) => {
       const id = await requireActive(ctx, "adr");
       if (!id) return;
+      if (!await guardCommand("adr", ctx, ctx.cwd, id)) return;
       await runAdr(args ?? "", ctx, pi, ctx.cwd, id);
     },
   });
@@ -111,6 +167,7 @@ export default function piDeepResearch(pi: ExtensionAPI) {
     handler: async (args, ctx) => {
       const id = await requireActive(ctx, "rfc");
       if (!id) return;
+      if (!await guardCommand("rfc", ctx, ctx.cwd, id)) return;
       await runRfc(args ?? "", ctx, pi, ctx.cwd, id);
     },
   });
@@ -121,6 +178,7 @@ export default function piDeepResearch(pi: ExtensionAPI) {
     handler: async (args, ctx) => {
       const id = await requireActive(ctx, "design-doc");
       if (!id) return;
+      if (!await guardCommand("design-doc", ctx, ctx.cwd, id)) return;
       await runDesignDoc(args ?? "", ctx, pi, ctx.cwd, id);
     },
   });
@@ -131,6 +189,7 @@ export default function piDeepResearch(pi: ExtensionAPI) {
     handler: async (args, ctx) => {
       const id = await requireActive(ctx, "prd");
       if (!id) return;
+      if (!await guardCommand("prd", ctx, ctx.cwd, id)) return;
       await runPrd(args ?? "", ctx, pi, ctx.cwd, id);
     },
   });
@@ -141,6 +200,7 @@ export default function piDeepResearch(pi: ExtensionAPI) {
     handler: async (args, ctx) => {
       const id = await requireActive(ctx, "oracle");
       if (!id) return;
+      if (!await guardCommand("oracle", ctx, ctx.cwd, id)) return;
       await runOracle(args ?? "", ctx, pi, ctx.cwd, id);
     },
   });
@@ -151,6 +211,7 @@ export default function piDeepResearch(pi: ExtensionAPI) {
     handler: async (args, ctx) => {
       const id = await requireActive(ctx, "contract");
       if (!id) return;
+      if (!await guardCommand("contract", ctx, ctx.cwd, id)) return;
       await runContract(args ?? "", ctx, pi, ctx.cwd, id);
     },
   });
@@ -161,6 +222,7 @@ export default function piDeepResearch(pi: ExtensionAPI) {
     handler: async (args, ctx) => {
       const id = await requireActive(ctx, "evaluate");
       if (!id) return;
+      if (!await guardCommand("evaluate", ctx, ctx.cwd, id)) return;
       await runEvaluate(args ?? "", ctx, pi, ctx.cwd, id);
     },
   });

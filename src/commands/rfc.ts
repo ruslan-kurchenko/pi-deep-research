@@ -53,7 +53,7 @@ export async function runRfc(
 
   pi.sendUserMessage(
     appendOracleGate(
-      await buildRfcInstruction({ threadId: activeThreadId, threadDir: dir, brief, synthesis, alternatives, outputPath, docNum, slug, today }),
+      await buildRfcInstruction({ threadId: activeThreadId, threadDir: dir, brief, synthesis, alternatives, outputPath, docNum, slug, today, projectRoot }),
       oracleInst
     ),
     { deliverAs: "followUp" }
