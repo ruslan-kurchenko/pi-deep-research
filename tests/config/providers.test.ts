@@ -1,5 +1,27 @@
-import { describe, expect, it, vi, afterEach } from "vitest";
+import { describe, expect, it, afterEach } from "vitest";
 import { checkProvider, providerFromModel } from "../../src/config/providers.js";
+
+// Bun's test runner does not support vi.stubEnv — use process.env directly
+const ENV_KEYS = ["ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY"] as const;
+const savedEnv: Partial<Record<(typeof ENV_KEYS)[number], string | undefined>> = {};
+function stubEnv(key: string, value: string) {
+  savedEnv[key as (typeof ENV_KEYS)[number]] = process.env[key];
+  process.env[key] = value;
+}
+function restoreEnv() {
+  for (const key of ENV_KEYS) {
+    if (key in savedEnv) {
+      if (savedEnv[key] === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = savedEnv[key];
+      }
+    }
+  }
+  for (const key of Object.keys(savedEnv)) {
+    delete savedEnv[key as (typeof ENV_KEYS)[number]];
+  }
+}
 
 describe("providerFromModel", () => {
   it("infers anthropic from native claude- prefix", () => {
@@ -33,31 +55,31 @@ describe("providerFromModel", () => {
 });
 
 describe("checkProvider", () => {
-  afterEach(() => vi.unstubAllEnvs());
+  afterEach(() => restoreEnv());
 
   it("anthropic native ID → available when ANTHROPIC_API_KEY set", async () => {
-    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
+    stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
     const result = await checkProvider("claude-haiku-4-5");
     expect(result.available).toBe(true);
     expect(result.provider).toBe("anthropic");
   });
 
   it("anthropic native ID → unavailable when ANTHROPIC_API_KEY missing", async () => {
-    vi.stubEnv("ANTHROPIC_API_KEY", "");
+    stubEnv("ANTHROPIC_API_KEY", "");
     const result = await checkProvider("claude-sonnet-4-6");
     expect(result.available).toBe(false);
     expect(result.reason).toContain("ANTHROPIC_API_KEY");
   });
 
   it("openai native ID → available when OPENAI_API_KEY set", async () => {
-    vi.stubEnv("OPENAI_API_KEY", "sk-openai-test");
+    stubEnv("OPENAI_API_KEY", "sk-openai-test");
     const result = await checkProvider("gpt-5.5");
     expect(result.available).toBe(true);
     expect(result.provider).toBe("openai");
   });
 
   it("openai native ID → unavailable when OPENAI_API_KEY missing", async () => {
-    vi.stubEnv("OPENAI_API_KEY", "");
+    stubEnv("OPENAI_API_KEY", "");
     const result = await checkProvider("gpt-5.5");
     expect(result.available).toBe(false);
     expect(result.reason).toContain("OPENAI_API_KEY");

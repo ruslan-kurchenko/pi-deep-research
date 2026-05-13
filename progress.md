@@ -11,6 +11,9 @@ In Progress
 - [x] **Bug D** — Oracle doc-exists guard: added `stat()` check in `after-doc` gate to verify linked doc is on disk before dispatching oracle; added empty-context guard to catch `_Document not found._` / `_No context files found._` sentinel strings before dispatch
 - [x] **Bug E** — Memory scout conditional: `runScout()` now loads project config; dispatches memory scout only when `config.mempalaceUrl` is set; default roster = web, oss, repo (3 scouts)
 - [x] **Bug I** — Evaluate mempalace guard: `buildEvaluateInstruction()` accepts optional `mempalaceUrl`; when absent, step 4 says "MemPalace not configured, skip"; when present, calls `mempalace_add_drawer` as before
+- [x] **Bug B** — `relevantPaths` wired: `runScout()` now parses space-separated args and passes to `buildRepoScoutSpec` instead of hardcoded `[]`; notify message shows paths when provided
+- [x] **Bug F** — Scope label fixed: changed misleading "select all that apply" label to "Research scope (primary):" — pi API has no `multiSelect`, only `select`
+- [x] **Layer 1 (M1)** — Hardcoded author removed: `src/docs/instructions.ts` no longer contains `"Ruslan Kurchenko"`; all 4 template call sites now use `resolveAuthorName(ctx.projectRoot)` which reads `git config user.name`
 
 ## Files Changed
 
@@ -29,6 +32,7 @@ In Progress
 
 ## Notes
 
-- 5 pre-existing `checkProvider` test failures (vi.stubEnv not in this Vitest version) — not regressions
-- 112 tests pass + 5 pre-existing fails (up from 97 baseline)
-- Bugs remaining: A (canRunCommand), B (relevantPaths — check if already fixed), F (scope multi-select)
+- 129/129 tests pass (up from 97 baseline; parallel agents added more tests)
+- `vi.stubEnv` Bun incompatibility in `providers.test.ts` fixed — replaced with direct `process.env` manipulation
+- Bugs remaining open: none in this batch — all 7 Layer 2 bugs now fixed
+- Metric M1 gate confirmed: `grep -rn '"Ruslan Kurchenko"' src/` returns 0
