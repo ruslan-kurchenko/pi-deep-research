@@ -1,42 +1,37 @@
 # Progress
 
 ## Status
-Layer 3 in progress — Worker 3 (/research:doctor) complete
+Layer 3 in progress (Worker 2 complete)
 
-## Layer 2 — Complete ✅ (135 tests)
-- Bug A: `canRunCommand()` + `COMMAND_POLICIES` table + `guardCommand` wired in index.ts
+## Completed
+
+### Layer 2 (all bugs fixed, 135 tests)
+- Bug A: `canRunCommand()` + `COMMAND_POLICIES` + guardCommand wired
 - Bug B: `relevantPaths` parsed from scout args
 - Bug C: OSS scout tool alignment (librarian + gh)
 - Bug D: Oracle doc-exists guard
-- Bug E: Conditional memory scout dispatch via `loadConfig`
-- Bug F: Scope label fixed, stored as `string[]`
-- Bug I: `buildEvaluateInstruction` conditional mempalace step
-- Layer 1: Hardcoded author removed from `src/docs/instructions.ts`
+- Bug E: Conditional memory scout dispatch (config.mempalaceUrl)
+- Bug F: Scope label fixed, stored as string[]
+- Bug I: `buildEvaluateInstruction` mempalace guard
 
-## Layer 3 — In Progress
+### Layer 3 — Worker 2 (built-in modules + examples)
+- `src/scouts/types.ts` — `ScoutDefinition` interface + `SCOUT_API_VERSION = 1`
+- `src/scouts/web/index.ts` — web scout as ScoutDefinition
+- `src/scouts/oss/index.ts` — OSS scout as ScoutDefinition (gh + librarian)
+- `src/scouts/repo/index.ts` — repo scout as ScoutDefinition
+- `examples/memory-mempalace/index.ts` — memory example (mempalaceUrl guard)
+- `examples/github-trends/index.ts` — simpler onboarding example (gh only)
+- `examples/github-trends/agent.md` + `prompt.md` + `README.md`
+- `examples/memory-mempalace/README.md`
+- `tests/scouts/builtin-scouts.test.ts` — 42 tests, all passing
+- 198/198 full suite green
 
-### Worker 3: /research:doctor — DONE ✅
-- `src/commands/doctor.ts`: `buildDoctorReport()` + `runDoctor()`
-  - Quick mode: config.parse, credential.<provider>, dir.research.writable, dir.docs.writable
-  - Deep mode: scout env checks + registry placeholder
-  - Exit codes: 0=ok, 1=warn, 2=error
-  - `--json` flag for machine-readable output
-- `src/config/config.ts`: added `allowExternalScouts?: boolean`
-- `src/state/tracker.ts`: added `"doctor"` to `ResearchCommand` + `COMMAND_POLICIES`
-- `src/index.ts`: registered `/research:doctor` command
-- `tests/commands/doctor.test.ts`: 14 tests
-- `tests/extension.smoke.test.ts`: updated count 13→15
-- **Total tests: 158/158 passing**
+## In Progress
+- Worker 1: registry + ensureInitialized + trust boundary
+- Worker 3: Doctor command
+- Worker 4: Plugin contract tests (M4) + smoke scripts + config schema
 
-### Worker 1: ScoutDefinition types + registry — status unknown
-### Worker 2: Built-in scout modules + examples — status unknown
-### Worker 4: Plugin contract tests + smoke scripts — status unknown
-
-## Files Changed
-- src/commands/doctor.ts (new)
-- src/config/config.ts (allowExternalScouts added)
-- src/state/tracker.ts (doctor command added)
-- src/index.ts (doctor registered)
-- tests/commands/doctor.test.ts (new, 14 tests)
-- tests/extension.smoke.test.ts (count 13→15, doctor added)
-- progress.md (this file)
+## Notes
+- Existing `src/scouts/web.ts`, `oss.ts`, `repo.ts` left intact — still used by `runScout()`
+- Built-in scout modules use `fileURLToPath(new URL(..., import.meta.url))` for portable paths
+- examples/ not in tsconfig.json include — they import from `../../src/scouts/types.js` directly
