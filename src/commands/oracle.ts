@@ -47,6 +47,17 @@ export async function runOracle(
       ctx.ui.notify("No linked doc found. Run /research:rfc, /research:design-doc, or /research:prd first.", "error");
       return;
     }
+    // Verify the file actually exists on disk — the LLM may not have written it yet
+    try {
+      const { stat } = await import("node:fs/promises");
+      await stat(hasDoc);
+    } catch {
+      ctx.ui.notify(
+        `Linked doc not found on disk: ${hasDoc}\n\nThe LLM may not have finished writing it yet. Check the file exists, then retry.`,
+        "error"
+      );
+      return;
+    }
   }
 
   const brief = (await readOptional(join(dir, "brief.md"))) ?? thread.topic;
@@ -65,6 +76,16 @@ export async function runOracle(
       : undefined;
 
   const contextMd = await buildOracleContext(dir, gate, linkedDocPath);
+
+  // Guard against empty context — don't dispatch oracle with nothing to review
+  const EMPTY_CONTEXTS = ["_Document not found._", "_No context files found._"];
+  if (EMPTY_CONTEXTS.some((s) => contextMd.trim() === s || contextMd.includes(s))) {
+    ctx.ui.notify(
+      `Oracle context is empty (${gate}). The required files are missing or could not be read.`,
+      "error"
+    );
+    return;
+  }
 
   await ensureOracleDir(dir);
 
