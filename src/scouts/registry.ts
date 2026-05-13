@@ -179,13 +179,13 @@ export async function probeAvailability(
 
   const probePromise: Promise<AvailabilityResult> = scout.isAvailable(pluginConfig).then(
     (result): AvailabilityResult => {
-      if (result === true) return { available: true, reason: "ok" };
-      if (result === false) return { available: false, reason: "false" };
+      if (result === true) return { available: true };
+      if (result === false) return { available: false, reason: "unavailable" };
       // Structured return
-      if (result.available) return { available: true, reason: "ok" };
+      if (result.available) return { available: true };
       return {
         available: false,
-        reason: "false",
+        reason: "unavailable",
         detail: (result as { available: false; reason: string }).reason,
       };
     },

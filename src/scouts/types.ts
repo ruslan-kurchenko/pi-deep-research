@@ -20,10 +20,17 @@
 /** Current ScoutDefinition API version. Increment MAJOR for breaking changes. */
 export const SCOUT_API_VERSION = 1 as const;
 
-/** Normalized result from isAvailable() — always resolved to this shape by the host. */
+/**
+ * Normalized result from isAvailable() — always resolved to this shape by the host.
+ * The `reason` field distinguishes why the scout is unavailable:
+ *   "unavailable" — isAvailable() returned false or { available: false }
+ *   "timeout"     — probe exceeded timeoutMs
+ *   "error"       — probe threw an exception
+ * `detail` carries the human-readable explanation (structured reason or error message).
+ */
 export type AvailabilityResult =
-  | { available: true; reason?: never }
-  | { available: false; reason: string };
+  | { available: true }
+  | { available: false; reason: "unavailable" | "timeout" | "error"; detail?: string };
 
 export interface ScoutDefinition {
   // ── Version ──────────────────────────────────────────────────────────────
@@ -148,7 +155,7 @@ export function normalizeAvailability(
   if (raw === false) return { available: false, reason: "unavailable" };
   if (raw.available) return { available: true };
   const neg = raw as { available: false; reason: string };
-  return { available: false, reason: neg.reason || "unavailable" };
+  return { available: false, reason: "unavailable", detail: neg.reason || undefined };
 }
 
 /**

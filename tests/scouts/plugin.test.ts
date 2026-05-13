@@ -134,7 +134,8 @@ describe("ScoutDefinition plugin contract (Metric M4)", () => {
     const elapsed = Date.now() - start;
     const n4 = normalizeAvailability(r4);
     expect(n4.available).toBe(false);
-    expect(n4.reason).toBe("MYENV not set");
+    expect(n4.available).toBe(false);
+    if (!n4.available) expect(n4.detail).toBe("MYENV not set");  // structured reason lands in detail
     expect(elapsed).toBeLessThan(1000); // much less than 2000ms default
   });
 
@@ -163,7 +164,8 @@ describe("ScoutDefinition plugin contract (Metric M4)", () => {
     expect(normalizeAvailability({ available: true })).toEqual({ available: true });
     expect(normalizeAvailability({ available: false, reason: "env not set" })).toEqual({
       available: false,
-      reason: "env not set",
+      reason: "unavailable",
+      detail: "env not set",
     });
   });
 

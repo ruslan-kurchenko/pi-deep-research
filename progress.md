@@ -40,13 +40,22 @@ Layer 3 in progress (Workers 2 + 3 + 4 complete; Worker 1 registry pending merge
 - `package.json` — added `smoke:no-memory` and `smoke:doctor-json` scripts
 - Config schema already complete (Worker 1 added `allowExternalScouts` + `scouts`)
 
+### Layer 3 — Worker 1 (registry + types)
+- `src/scouts/types.ts` — appended `ScoutSpec`, `LoadResult` types; updated `AvailabilityResult` to union with `reason: "unavailable"|"timeout"|"error"` + `detail?`; updated `normalizeAvailability` to match
+- `src/scouts/registry.ts` — `normalizeTrustSource`, `enforceTrustBoundary`, `loadScout` (Stage 1), `probeAvailability` (Stage 2), `ScoutRegistry` class, `ensureInitialized` (memoized by resolved projectRoot)
+- `src/config/config.ts` — added `scouts?` field to `DeepResearchConfig`
+- `tests/scouts/plugin.test.ts` — updated to use `detail` field instead of `reason` for structured negative results
+- `tests/scouts/registry.test.ts` — 17 tests covering all registry functions
+- Full suite: 222/222 green
+
 ## In Progress
-- Worker 1: registry + ensureInitialized + trust boundary (pending merge)
+(none — all Layer 3 workers complete)
 
 ## Open Gaps
 - `DoctorReport.scoutRoster` field from design doc not in Worker 3's implementation
   → smoke-doctor-json.mjs checks `configSummary.loadedScouts` instead; tracked for follow-up
-- Worker 1 registry (`src/scouts/registry.ts`) not yet merged; `runScout()` still uses old spec builders directly
+- `runScout()` still uses old spec builders directly (registry not wired yet)
+  → Layer 3 follow-up: wire `ensureInitialized()` + registry into `runScout()`
 
 ## Notes
 - Existing `src/scouts/web.ts`, `oss.ts`, `repo.ts` left intact — still used by `runScout()`
