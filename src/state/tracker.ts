@@ -40,7 +40,7 @@ export interface CommandPolicy {
 export type ResearchCommand =
   | "new" | "scout" | "groom" | "alternatives"
   | "document" | "adr" | "rfc" | "design-doc" | "prd"
-  | "oracle" | "contract" | "evaluate" | "status" | "resume";
+  | "oracle" | "contract" | "evaluate" | "status" | "resume" | "doctor";
 
 export const COMMAND_POLICIES: Record<ResearchCommand, CommandPolicy> = {
   new:          { allowedPhases: [], advancesTo: null, allowRerun: true, requiredFiles: [] },
@@ -90,6 +90,7 @@ export const COMMAND_POLICIES: Record<ResearchCommand, CommandPolicy> = {
         : "Contract requires at least one linked doc (ADR/RFC/Design Doc).";
     },
   },
+  doctor:  { allowedPhases: [], advancesTo: null, allowRerun: true, requiredFiles: [] },
   evaluate: {
     allowedPhases: ["contract", "evaluate"],
     advancesTo: "evaluate",

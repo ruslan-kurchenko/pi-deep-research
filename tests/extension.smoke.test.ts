@@ -13,6 +13,7 @@ const ALL_COMMANDS = [
   "research:oracle",
   "research:contract",
   "research:evaluate",
+  "research:doctor",
   "research:status",
   "research:resume",
 ];
@@ -23,7 +24,7 @@ describe("pi-deep-research extension", () => {
     expect(typeof factory).toBe("function");
   });
 
-  it("registers all 13 /research:* commands", async () => {
+  it("registers all 15 /research:* commands", async () => {
     const { default: factory } = await import("../src/index.js");
 
     const registeredCommands: string[] = [];

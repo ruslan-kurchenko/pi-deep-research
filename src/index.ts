@@ -14,6 +14,7 @@ import { runPrd } from "./commands/prd.js";
 import { runOracle } from "./commands/oracle.js";
 import { runContract } from "./commands/contract.js";
 import { runEvaluate } from "./commands/evaluate.js";
+import { runDoctor } from "./commands/doctor.js";
 import { runStatus, runResume } from "./commands/status.js";
 import { getActiveThread, getThread } from "./state/store.js";
 import { canRunCommand } from "./state/tracker.js";
@@ -224,6 +225,14 @@ export default function piDeepResearch(pi: ExtensionAPI) {
       if (!id) return;
       if (!await guardCommand("evaluate", ctx, ctx.cwd, id)) return;
       await runEvaluate(args ?? "", ctx, pi, ctx.cwd, id);
+    },
+  });
+
+  // ── /research:doctor ──────────────────────────────────────────────────────
+  pi.registerCommand("research:doctor", {
+    description: "Preflight check — verifies config, credentials, and scout availability",
+    handler: async (args, ctx) => {
+      await runDoctor(args ?? "", ctx, ctx.cwd);
     },
   });
 

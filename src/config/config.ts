@@ -9,6 +9,21 @@ export interface DeepResearchConfig {
   user?: { name?: string };
   /** Override agent model assignments. Keys are agent names. */
   models?: Record<string, string>;
+  /**
+   * Allow loading scout modules from paths outside <projectRoot>/scouts/ or
+   * <projectRoot>/examples/. Defaults to false.
+   * Only enable in trusted workspaces — external scouts execute local JavaScript.
+   */
+  allowExternalScouts?: boolean;
+  /**
+   * Additional scout modules to include in the registry.
+   * Each entry is either:
+   *   - a string: built-in id ("web", "oss", "repo") or path to a compiled .js file
+   *   - an object: { source: string; pluginConfig?: unknown }
+   *     where pluginConfig is passed opaquely to isAvailable() and the scout builder.
+   * Relative paths are resolved against projectRoot.
+   */
+  scouts?: Array<string | { source: string; pluginConfig?: unknown }>;
 }
 
 /**
