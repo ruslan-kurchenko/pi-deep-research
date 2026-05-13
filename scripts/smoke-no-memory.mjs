@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * Smoke test: no MemPalace calls when mempalaceUrl is absent.
  * Metric M2 verification.
