@@ -7,13 +7,6 @@ import { buildMemPalaceClient } from "../mempalace/client.js";
 import { createThread } from "../state/store.js";
 import { setActiveThread } from "../state/store.js";
 
-const GLOBAL_STATE_DIR = join(
-  process.env["HOME"] ?? "~",
-  ".pi",
-  "agent",
-  "state"
-);
-
 const SCOPE_OPTIONS = [
   "architecture",
   "feature",
@@ -63,7 +56,7 @@ export async function runNew(
   const dir = threadDir(projectRoot, id);
 
   await createThread(projectRoot, id, topic, [scope]);
-  await setActiveThread(GLOBAL_STATE_DIR, id);
+  await setActiveThread(projectRoot, id);
 
   // 5. Write the initial brief.md with the grill prompt as starter content
   const briefPath = join(dir, "brief.md");

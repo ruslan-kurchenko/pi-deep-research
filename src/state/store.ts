@@ -56,7 +56,8 @@ export interface ResearchThread {
 }
 
 const STATE_FILE = ".state.json";
-const ACTIVE_FILE = "pi-deep-research-active.json";
+/** Project-local active-thread pointer. Stored inside the project, not globally. */
+const ACTIVE_FILE = join(".pi", "deep-research", "active.json");
 
 // ── per-thread state ──────────────────────────────────────────────────────────
 
@@ -184,25 +185,48 @@ interface ActivePointer {
   threadId: string;
 }
 
-export async function getActiveThread(globalStateDir: string): Promise<string | null> {
+/**
+ * Get the active thread for the given project.
+ * Pointer is stored at <projectRoot>/.pi/deep-research/active.json (project-scoped).
+ * Falls back to the legacy global pointer for migration compatibility.
+ */
+export async function getActiveThread(projectRoot: string): Promise<string | null> {
+  // Project-local (new location)
   try {
-    const raw = await readFile(join(globalStateDir, ACTIVE_FILE), "utf8");
+    const raw = await readFile(join(projectRoot, ACTIVE_FILE), "utf8");
     return (JSON.parse(raw) as ActivePointer).threadId;
+  } catch {
+    // fall through to legacy
+  }
+  // Legacy global location — migrate on next setActiveThread
+  try {
+    const { homedir } = await import("node:os");
+    const legacyPath = join(homedir(), ".pi", "agent", "state", "pi-deep-research-active.json");
+    const raw = await readFile(legacyPath, "utf8");
+    const id = (JSON.parse(raw) as ActivePointer).threadId;
+    // Only return the legacy pointer if that thread actually exists in this project
+    const thread = await getThread(projectRoot, id);
+    return thread ? id : null;
   } catch {
     return null;
   }
 }
 
-export async function setActiveThread(globalStateDir: string, threadId: string): Promise<void> {
-  await mkdir(globalStateDir, { recursive: true });
+/**
+ * Set the active thread for the given project.
+ * Writes to <projectRoot>/.pi/deep-research/active.json (project-scoped).
+ */
+export async function setActiveThread(projectRoot: string, threadId: string): Promise<void> {
+  const dir = join(projectRoot, ".pi", "deep-research");
+  await mkdir(dir, { recursive: true });
   const ptr: ActivePointer = { threadId };
-  await writeFile(join(globalStateDir, ACTIVE_FILE), JSON.stringify(ptr, null, 2));
+  await writeFile(join(projectRoot, ACTIVE_FILE), JSON.stringify(ptr, null, 2));
 }
 
-export async function clearActiveThread(globalStateDir: string): Promise<void> {
+export async function clearActiveThread(projectRoot: string): Promise<void> {
   try {
     const { unlink } = await import("node:fs/promises");
-    await unlink(join(globalStateDir, ACTIVE_FILE));
+    await unlink(join(projectRoot, ACTIVE_FILE));
   } catch {
     // already gone — that's fine
   }

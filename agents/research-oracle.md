@@ -2,7 +2,7 @@
 name: research-oracle
 description: Cross-family adversarial reviewer — applies SOTA meta-cognitive reasoning to catch what the upstream Claude analysis missed, scored by claim, with mandatory output schema
 tools: read, write
-model: openai/gpt-5.5
+model: gpt-5.5
 thinking: high
 skills: meta-cognitive
 ---

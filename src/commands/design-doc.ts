@@ -23,11 +23,7 @@ export async function runDesignDoc(
   if (!thread) { ctx.ui.notify(`No active thread: ${activeThreadId}`, "error"); return; }
 
   const dir = threadDir(projectRoot, activeThreadId);
-  const alternatives = await readOptional(join(dir, "alternatives.md"));
-  if (!alternatives) {
-    ctx.ui.notify("alternatives.md not found. Run /research:alternatives first.", "error");
-    return;
-  }
+  const alternatives = (await readOptional(join(dir, "alternatives.md"))) ?? "";
 
   const brief = (await readOptional(join(dir, "brief.md"))) ?? thread.topic;
   const synthesis = (await readOptional(join(dir, "synthesis.md"))) ?? "";

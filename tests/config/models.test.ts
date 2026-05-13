@@ -51,17 +51,17 @@ describe("loadModelsConfig", () => {
     await mkdir(piDir, { recursive: true });
     await writeFile(
       join(piDir, "models.json"),
-      JSON.stringify({ agents: { "research-oracle": "openai/gpt-5.5" } })
+      JSON.stringify({ agents: { "research-oracle": "gpt-5.5" } })
     );
     const cfg = await loadModelsConfig(TMP);
-    expect(cfg.agents["research-oracle"]).toBe("openai/gpt-5.5");
+    expect(cfg.agents["research-oracle"]).toBe("gpt-5.5");
   });
 });
 
 describe("resolveAgentModel", () => {
   it("returns default when no override", async () => {
     const model = await resolveAgentModel("research-web-scout", TMP);
-    expect(model).toBe("anthropic/claude-haiku-4.5");
+    expect(model).toBe("claude-haiku-4-5");
   });
 
   it("project file overrides default", async () => {
@@ -69,10 +69,10 @@ describe("resolveAgentModel", () => {
     await mkdir(piDir, { recursive: true });
     await writeFile(
       join(piDir, "models.json"),
-      JSON.stringify({ agents: { "research-web-scout": "openai/gpt-5.5" } })
+      JSON.stringify({ agents: { "research-web-scout": "gpt-5.5" } })
     );
     const model = await resolveAgentModel("research-web-scout", TMP);
-    expect(model).toBe("openai/gpt-5.5");
+    expect(model).toBe("gpt-5.5");
   });
 
   it("falls back to FALLBACK_CHAIN for unknown agent", async () => {

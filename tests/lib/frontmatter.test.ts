@@ -3,11 +3,11 @@ import { buildFrontmatter, prependFrontmatter } from "../../src/lib/frontmatter.
 
 describe("buildFrontmatter", () => {
   it("produces a valid YAML block", () => {
-    const fm = buildFrontmatter({ agent: "research-web-scout", model: "anthropic/claude-haiku-4.5" });
+    const fm = buildFrontmatter({ agent: "research-web-scout", model: "claude-haiku-4-5" });
     expect(fm).toMatch(/^---\n/);
     expect(fm).toMatch(/\n---$/);
     expect(fm).toContain("agent: research-web-scout");
-    expect(fm).toContain("model: anthropic/claude-haiku-4.5");
+    expect(fm).toContain("model: claude-haiku-4-5");
   });
 
   it("quotes values that contain colons", () => {

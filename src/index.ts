@@ -16,8 +16,6 @@ import { runEvaluate } from "./commands/evaluate.js";
 import { runStatus, runResume } from "./commands/status.js";
 import { getActiveThread } from "./state/store.js";
 
-const GLOBAL_STATE_DIR = join(process.env["HOME"] ?? "~", ".pi", "agent", "state");
-
 function inferProjectWing(cwd: string): string {
   const parts = cwd.replace(/\/$/, "").split("/");
   const name = parts[parts.length - 1] ?? "project";
@@ -29,7 +27,7 @@ async function requireActive(
   ctx: Parameters<Parameters<ExtensionAPI["registerCommand"]>[1]["handler"]>[1],
   label: string
 ): Promise<string | null> {
-  const id = await getActiveThread(GLOBAL_STATE_DIR);
+  const id = await getActiveThread(ctx.cwd);
   if (!id) {
     ctx.ui.notify(`No active thread. Run /research:new first.`, "error");
     return null;
@@ -171,7 +169,7 @@ export default function piDeepResearch(pi: ExtensionAPI) {
   pi.registerCommand("research:status", {
     description: "Show all research threads and their current phase",
     handler: async (args, ctx) => {
-      const activeId = await getActiveThread(GLOBAL_STATE_DIR);
+      const activeId = await getActiveThread(ctx.cwd);
       await runStatus(args ?? "", ctx, ctx.cwd, activeId);
     },
   });
@@ -180,7 +178,7 @@ export default function piDeepResearch(pi: ExtensionAPI) {
   pi.registerCommand("research:resume", {
     description: "Switch active research thread",
     handler: async (args, ctx) => {
-      await runResume(args ?? "", ctx, ctx.cwd, GLOBAL_STATE_DIR);
+      await runResume(args ?? "", ctx, ctx.cwd, ctx.cwd);
     },
   });
 }

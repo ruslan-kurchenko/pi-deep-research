@@ -7,24 +7,26 @@ import { join } from "node:path";
 // Gemini 3.1 Pro → cross-family adversarial review
 // GPT-5.5      → cross-family oracle, highest reasoning bar
 
+// All model IDs use native pi format — no provider prefix.
+// providerFromModel() in providers.ts infers the provider from the name prefix.
 export const AGENT_MODEL_DEFAULTS: Record<string, string> = {
-  "research-memory-scout":    "anthropic/claude-haiku-4.5",
-  "research-web-scout":       "anthropic/claude-haiku-4.5",
-  "research-repo-scout":      "anthropic/claude-sonnet-4.6",
-  "research-oss-scout":       "anthropic/claude-sonnet-4.6",
-  "research-synthesizer":     "anthropic/claude-sonnet-4.6",
-  "research-challenger":      "google/gemini-3.1-pro-preview",
-  "research-devils-advocate": "google/gemini-3.1-pro-preview",
-  "research-doc-advisor":     "anthropic/claude-haiku-4.5",
-  "research-kpi-architect":   "anthropic/claude-sonnet-4.6",
-  "research-architect":       "anthropic/claude-sonnet-4.6",
-  "research-oracle":          "openai/gpt-5.5",
+  "research-memory-scout":    "claude-haiku-4-5",
+  "research-web-scout":       "claude-haiku-4-5",
+  "research-repo-scout":      "claude-sonnet-4-6",
+  "research-oss-scout":       "claude-sonnet-4-6",
+  "research-synthesizer":     "claude-sonnet-4-6",
+  "research-challenger":      "gemini-2.5-pro",
+  "research-devils-advocate": "gemini-2.5-pro",
+  "research-doc-advisor":     "claude-haiku-4-5",
+  "research-kpi-architect":   "claude-sonnet-4-6",
+  "research-architect":       "claude-sonnet-4-6",
+  "research-oracle":          "gpt-5.5",
 };
 
 /** Hard fallback chain when a provider isn't available. Never reaches index 0 in healthy setup. */
 export const FALLBACK_CHAIN = [
-  "anthropic/claude-sonnet-4.6",
-  "anthropic/claude-haiku-4.5",
+  "claude-sonnet-4-6",
+  "claude-haiku-4-5",
 ];
 
 // ── Project config ────────────────────────────────────────────────────────────

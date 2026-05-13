@@ -9,12 +9,20 @@ export interface ProviderStatus {
 }
 
 /**
- * Derive the provider prefix from a model ID like "anthropic/claude-haiku-4.5".
- * Returns "anthropic", "openai", "google", etc.
+ * Derive the provider from a model ID.
+ * Supports both native IDs ("claude-haiku-4-5") and legacy slash format ("anthropic/claude-haiku-4.5").
  */
 export function providerFromModel(modelId: string): string {
+  // Legacy slash format — still supported
   const slash = modelId.indexOf("/");
-  return slash >= 0 ? modelId.slice(0, slash) : modelId;
+  if (slash >= 0) return modelId.slice(0, slash);
+
+  // Native model ID — infer provider from name prefix
+  if (modelId.startsWith("claude-")) return "anthropic";
+  if (modelId.startsWith("gpt-") || modelId.startsWith("o1") || modelId.startsWith("o3") || modelId.startsWith("o4")) return "openai";
+  if (modelId.startsWith("gemini-")) return "google";
+
+  return modelId; // unknown — caller handles via default
 }
 
 /**
